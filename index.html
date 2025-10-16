@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ตาราง OT ส่วนตัว</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+  th { background-color: #a9d0f5; }
+  input, select { width: 70px; text-align: center; }
+  button { margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<h2>ตาราง OT ส่วนตัว (16 ต.ค. – 15 พ.ย. 2025)</h2>
+<p>เลือกกะ: N1 (03:45), D1 (15:45) / กรอกชั่วโมง OT หลังเลือกกะ</p>
+<p>หมายเหตุ: ใส่ "วันทำโอวันหยุด", "วันลา", หรือ "-" ถ้าไม่ได้ทำ OT</p>
+<button onclick="resetTable()">Reset ตาราง</button>
+
+<table id="otTable">
+  <thead>
+    <tr>
+      <th>วันที่</th>
+      <th>วัน</th>
+      <th>กะ</th>
+      <th>ชั่วโมง OT</th>
+      <th>รวมต่อวัน</th>
+      <th>เวลาเริ่ม – เวลาเสร็จ</th>
+      <th>หมายเหตุ</th>
+    </tr>
+  </thead>
+  <tbody id="tableBody"></tbody>
+  <tfoot>
+    <tr>
+      <th colspan="4">รวมทั้งหมด</th>
+      <th id="totalAll">0</th>
+      <th colspan="2"></th>
+    </tr>
+  </tfoot>
+</table>
+
+<script>
+const dayNames = ["จันทร์","อังคาร","พุธ","พฤหัส","ศุกร์","เสาร์","อาทิตย์"];
+const startDate = new Date("2025-10-16");
+const endDate = new Date("2025-11-15");
+const tbody = document.getElementById("tableBody");
+
+let savedData = JSON.parse(localStorage.getItem("otData") || "[]");
+
+function createTable(){
+    let currentDate = new Date(startDate);
+    let rowIndex = 0;
+
+    while(currentDate <= endDate){
+        const tr = document.createElement("tr");
+        const dayOfWeek = dayNames[(currentDate.getDay()+6)%7];
+
+        // วันที่
+        const tdDate = document.createElement("td");
+        tdDate.textContent = currentDate.toLocaleDateString('th-TH');
+        tr.appendChild(tdDate);
+
+        // วัน
+        const tdDay = document.createElement("td");
+        tdDay.textContent = dayOfWeek;
+        tr.appendChild(tdDay);
+
+        // กะ
+        const tdShift = document.createElement("td");
+        const selectShift = document.createElement("select");
+        ["","N1","D1"].forEach(v=>{
+            const option = document.createElement("option");
+            option.value = v;
+            option.textContent = v;
+            selectShift.appendChild(option);
+        });
+        selectShift.addEventListener("change", calculateHours);
+        tdShift.appendChild(selectShift);
+        tr.appendChild(tdShift);
+
+        // ชั่วโมง OT
+        const tdHours = document.createElement("td");
+        const inputHours = document.createElement("input");
+        inputHours.type = "number"; inputHours.min = "0"; inputHours.max = "4";
+        inputHours.style.display = "none";
+        inputHours.addEventListener("input", calculateHours);
+        tdHours.appendChild(inputHours);
+        tr.appendChild(tdHours);
+
+        // รวมต่อวัน
+        const tdTotal = document.createElement("td");
+        tdTotal.textContent = "0";
+        tr.appendChild(tdTotal);
+
+        // เวลาเริ่ม–เสร็จ
+        const tdTime = document.createElement("td");
+        tdTime.textContent = "";
+        tr.appendChild(tdTime);
+
+        // หมายเหตุ
+        const tdNote = document.createElement("td");
+        const inputNote = document.createElement("input");
+        inputNote.type = "text";
+        inputNote.placeholder = "-";
+        inputNote.style.width = "120px";
+        inputNote.addEventListener("input", saveData);
+        tdNote.appendChild(inputNote);
+        tr.appendChild(tdNote);
+
+        tbody.appendChild(tr);
+
+        // โหลดข้อมูลจาก LocalStorage
+        if(savedData[rowIndex]){
+            selectShift.value = savedData[rowIndex].shift || "";
+            inputHours.value = savedData[rowIndex].hours || "";
+            inputHours.style.display = selectShift.value ? "inline-block" : "none";
+            inputNote.value = savedData[rowIndex].note || "";
+        }
+
+        currentDate.setDate(currentDate.getDate() + 1);
+        rowIndex++;
+    }
+}
+
+function getTimeRange(shift, hours){
+    if(hours <= 0 || !shift) return "";
+    if(shift === "N1") return `03:45 - ${addHours("03:45", hours)}`;
+    if(shift === "D1") return `15:45 - ${addHours("15:45", hours)}`;
+    return "";
+}
+
+function addHours(startTime, hoursToAdd){
+    const [hour,min] = startTime.split(":").map(Number);
+    let newHour = hour + hoursToAdd;
+    if(newHour >= 24) newHour -= 24;
+    return `${newHour.toString().padStart(2,'0')}:${min.toString().padStart(2,'0')}`;
+}
+
+function calculateHours(){
+    let totalAll = 0;
+    const rows = tbody.querySelectorAll("tr");
+
+    rows.forEach(row=>{
+        const select = row.cells[2].querySelector("select");
+        const input = row.cells[3].querySelector("input");
+        const shift = select.value;
+        let hours = parseFloat(input.value) || 0;
+
+        // แสดงช่องกรอกชั่วโมงถ้ามีการเลือกกะ
+        input.style.display = shift ? "inline-block" : "none";
+
+        // รวมต่อวันและเวลา
+        row.cells[4].textContent = hours;
+        row.cells[5].textContent = getTimeRange(shift,hours);
+
+        totalAll += hours;
+    });
+
+    document.getElementById("totalAll").textContent = totalAll;
+
+    saveData();
+}
+
+function saveData(){
+    const rows = tbody.querySelectorAll("tr");
+    let dataToSave = [];
+
+    rows.forEach(row=>{
+        const shift = row.cells[2].querySelector("select").value;
+        const hours = parseFloat(row.cells[3].querySelector("input").value) || 0;
+        const note = row.cells[6].querySelector("input").value || "";
+        dataToSave.push({shift, hours, note});
+    });
+
+    localStorage.setItem("otData", JSON.stringify(dataToSave));
+}
+
+function resetTable(){
+    localStorage.removeItem("otData");
+    location.reload();
+}
+
+// สร้างตาราง
+createTable();
+calculateHours();
+</script>
+
+</body>
+</html>
