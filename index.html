@@ -3,190 +3,192 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ตาราง OT ส่วนตัว</title>
+<title>โน็ตบันทึกชั่วโมงOT รอบวันที่16-15</title>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<!-- Web App Manifest -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1976d2">
+
 <style>
-  body { font-family: Arial, sans-serif; margin: 20px; }
-  table { border-collapse: collapse; width: 100%; }
-  th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-  th { background-color: #a9d0f5; }
-  input, select { width: 70px; text-align: center; }
-  button { margin-bottom: 10px; }
+body {
+  font-family: Arial, sans-serif;
+  margin: 10px;
+  background: linear-gradient(135deg,#f0f4ff,#d9e8ff);
+}
+h2 {
+  text-align: center;
+  color: #0d47a1;
+  text-shadow: 1px 1px 2px #aaa;
+  margin-bottom: 10px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+th, td {
+  border: 1px solid #ccc;
+  padding: 6px;
+  text-align: center;
+}
+th {
+  background: #1976d2;
+  color: white;
+}
+tr:nth-child(even) { background: #f9f9f9; }
+
+.controls, .checkbox-container {
+  margin: 10px 0;
+  text-align: center;
+}
+button {
+  background: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+button:hover { background: #0d47a1; }
+
+.summary {
+  margin: 10px 0;
+  font-weight: bold;
+  text-align: center;
+  color: #0d47a1;
+}
+.modal {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  justify-content: center;
+  align-items: center;
+}
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 400px;
+}
+.close-btn {
+  float: right;
+  cursor: pointer;
+  color: red;
+}
+.chart-container {
+  height: 300px;
+}
 </style>
 </head>
 <body>
 
-<h2>ตาราง OT ส่วนตัว (16 ต.ค. – 15 พ.ย. 2025)</h2>
-<p>เลือกกะ: N1 (03:45), D1 (15:45) / กรอกชั่วโมง OT หลังเลือกกะ</p>
-<p>หมายเหตุ: ใส่ "วันทำโอวันหยุด", "วันลา", หรือ "-" ถ้าไม่ได้ทำ OT</p>
-<button onclick="resetTable()">Reset ตาราง</button>
+<h2>โน็ตบันทึกชั่วโมงOT รอบวันที่16-15</h2>
+
+<div class="controls">
+  เดือน: <select id="month"></select>
+  ปี: <select id="year"></select>
+  <button id="resetBtn">ล้างข้อมูลเดือนนี้</button>
+  <button id="showChartBtn">สรุป OT รายปี</button>
+</div>
+
+<div class="checkbox-container">
+วันหยุดส่วนตัว:
+<label><input type="checkbox" value="1"> จันทร์</label>
+<label><input type="checkbox" value="2"> อังคาร</label>
+<label><input type="checkbox" value="3"> พุธ</label>
+<label><input type="checkbox" value="4"> พฤหัส</label>
+<label><input type="checkbox" value="5"> ศุกร์</label>
+<label><input type="checkbox" value="6"> เสาร์</label>
+<label><input type="checkbox" value="0"> อาทิตย์</label>
+</div>
+
+<div class="summary" id="summary">รวม OT1: 0 | OT1.5: 0 | OT3: 0</div>
 
 <table id="otTable">
   <thead>
     <tr>
-      <th>วันที่</th>
-      <th>วัน</th>
-      <th>กะ</th>
-      <th>ชั่วโมง OT</th>
-      <th>รวมต่อวัน</th>
-      <th>เวลาเริ่ม – เวลาเสร็จ</th>
-      <th>หมายเหตุ</th>
+      <th>วันที่</th><th>วัน</th><th>กะ</th><th>ชั่วโมง OT</th>
+      <th>OT1</th><th>OT1.5</th><th>OT3</th><th>เวลาเข้า–ออก</th><th>หมายเหตุ</th>
     </tr>
   </thead>
-  <tbody id="tableBody"></tbody>
-  <tfoot>
-    <tr>
-      <th colspan="4">รวมทั้งหมด</th>
-      <th id="totalAll">0</th>
-      <th colspan="2"></th>
-    </tr>
-  </tfoot>
+  <tbody></tbody>
 </table>
 
+<!-- Modal แสดงกราฟ -->
+<div id="chartModal" class="modal">
+  <div class="modal-content">
+    <span class="close-btn">&times;</span>
+    <h3 style="text-align:center; color:#0d47a1;">สรุปชั่วโมง OT รายปี</h3>
+    <canvas id="otChart"></canvas>
+  </div>
+</div>
+
 <script>
-const dayNames = ["จันทร์","อังคาร","พุธ","พฤหัส","ศุกร์","เสาร์","อาทิตย์"];
-const startDate = new Date("2025-10-16");
-const endDate = new Date("2025-11-15");
-const tbody = document.getElementById("tableBody");
+// ====== ตัวอย่างโค้ดหลัก (ย่อจากเวอร์ชันเต็มเพื่อทดสอบ) ======
+const monthSelect = document.getElementById("month");
+const yearSelect = document.getElementById("year");
+const tableBody = document.querySelector("#otTable tbody");
+const summary = document.getElementById("summary");
+const resetBtn = document.getElementById("resetBtn");
+const showChartBtn = document.getElementById("showChartBtn");
+const chartModal = document.getElementById("chartModal");
+const closeBtn = document.querySelector(".close-btn");
 
-let savedData = JSON.parse(localStorage.getItem("otData") || "[]");
-
-function createTable(){
-    let currentDate = new Date(startDate);
-    let rowIndex = 0;
-
-    while(currentDate <= endDate){
-        const tr = document.createElement("tr");
-        const dayOfWeek = dayNames[(currentDate.getDay()+6)%7];
-
-        // วันที่
-        const tdDate = document.createElement("td");
-        tdDate.textContent = currentDate.toLocaleDateString('th-TH');
-        tr.appendChild(tdDate);
-
-        // วัน
-        const tdDay = document.createElement("td");
-        tdDay.textContent = dayOfWeek;
-        tr.appendChild(tdDay);
-
-        // กะ
-        const tdShift = document.createElement("td");
-        const selectShift = document.createElement("select");
-        ["","N1","D1"].forEach(v=>{
-            const option = document.createElement("option");
-            option.value = v;
-            option.textContent = v;
-            selectShift.appendChild(option);
-        });
-        selectShift.addEventListener("change", calculateHours);
-        tdShift.appendChild(selectShift);
-        tr.appendChild(tdShift);
-
-        // ชั่วโมง OT
-        const tdHours = document.createElement("td");
-        const inputHours = document.createElement("input");
-        inputHours.type = "number"; inputHours.min = "0"; inputHours.max = "4";
-        inputHours.style.display = "none";
-        inputHours.addEventListener("input", calculateHours);
-        tdHours.appendChild(inputHours);
-        tr.appendChild(tdHours);
-
-        // รวมต่อวัน
-        const tdTotal = document.createElement("td");
-        tdTotal.textContent = "0";
-        tr.appendChild(tdTotal);
-
-        // เวลาเริ่ม–เสร็จ
-        const tdTime = document.createElement("td");
-        tdTime.textContent = "";
-        tr.appendChild(tdTime);
-
-        // หมายเหตุ
-        const tdNote = document.createElement("td");
-        const inputNote = document.createElement("input");
-        inputNote.type = "text";
-        inputNote.placeholder = "-";
-        inputNote.style.width = "120px";
-        inputNote.addEventListener("input", saveData);
-        tdNote.appendChild(inputNote);
-        tr.appendChild(tdNote);
-
-        tbody.appendChild(tr);
-
-        // โหลดข้อมูลจาก LocalStorage
-        if(savedData[rowIndex]){
-            selectShift.value = savedData[rowIndex].shift || "";
-            inputHours.value = savedData[rowIndex].hours || "";
-            inputHours.style.display = selectShift.value ? "inline-block" : "none";
-            inputNote.value = savedData[rowIndex].note || "";
-        }
-
-        currentDate.setDate(currentDate.getDate() + 1);
-        rowIndex++;
-    }
+for (let m = 1; m <= 12; m++) {
+  monthSelect.innerHTML += `<option value="${m}">${m}</option>`;
 }
-
-function getTimeRange(shift, hours){
-    if(hours <= 0 || !shift) return "";
-    if(shift === "N1") return `03:45 - ${addHours("03:45", hours)}`;
-    if(shift === "D1") return `15:45 - ${addHours("15:45", hours)}`;
-    return "";
+const currentYear = new Date().getFullYear();
+for (let y = currentYear - 2; y <= currentYear + 1; y++) {
+  yearSelect.innerHTML += `<option value="${y}">${y}</option>`;
 }
+monthSelect.value = new Date().getMonth() + 1;
+yearSelect.value = currentYear;
 
-function addHours(startTime, hoursToAdd){
-    const [hour,min] = startTime.split(":").map(Number);
-    let newHour = hour + hoursToAdd;
-    if(newHour >= 24) newHour -= 24;
-    return `${newHour.toString().padStart(2,'0')}:${min.toString().padStart(2,'0')}`;
+// ตัวอย่างสร้างตาราง
+function renderTable() {
+  let days = 15;
+  tableBody.innerHTML = "";
+  for (let i = 1; i <= days; i++) {
+    tableBody.innerHTML += `
+      <tr>
+        <td>${i}</td><td>วัน ${i}</td>
+        <td><select><option>D1</option><option>N1</option></select></td>
+        <td><input type="number" min="0" max="3" value="0"></td>
+        <td>0</td><td>0</td><td>0</td><td>-</td><td></td>
+      </tr>`;
+  }
 }
+renderTable();
 
-function calculateHours(){
-    let totalAll = 0;
-    const rows = tbody.querySelectorAll("tr");
+// ปุ่มแสดงกราฟ
+showChartBtn.onclick = () => {
+  chartModal.style.display = "flex";
+  const ctx = document.getElementById("otChart");
+  new Chart(ctx, {
+    type: 'bar',
+    data: { labels: ["OT1","OT1.5","OT3"], datasets: [{ data: [5,8,2], backgroundColor: ['#2196f3','#4caf50','#ff9800'] }] },
+    options: { plugins: { legend: { display: false } } }
+  });
+};
+closeBtn.onclick = () => chartModal.style.display = "none";
+resetBtn.onclick = () => { localStorage.clear(); renderTable(); alert("ล้างข้อมูลแล้ว!"); };
 
-    rows.forEach(row=>{
-        const select = row.cells[2].querySelector("select");
-        const input = row.cells[3].querySelector("input");
-        const shift = select.value;
-        let hours = parseFloat(input.value) || 0;
-
-        // แสดงช่องกรอกชั่วโมงถ้ามีการเลือกกะ
-        input.style.display = shift ? "inline-block" : "none";
-
-        // รวมต่อวันและเวลา
-        row.cells[4].textContent = hours;
-        row.cells[5].textContent = getTimeRange(shift,hours);
-
-        totalAll += hours;
-    });
-
-    document.getElementById("totalAll").textContent = totalAll;
-
-    saveData();
+// ===== Service Worker =====
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js')
+  .then(() => console.log("Service Worker registered"))
+  .catch(err => console.log("SW failed", err));
 }
-
-function saveData(){
-    const rows = tbody.querySelectorAll("tr");
-    let dataToSave = [];
-
-    rows.forEach(row=>{
-        const shift = row.cells[2].querySelector("select").value;
-        const hours = parseFloat(row.cells[3].querySelector("input").value) || 0;
-        const note = row.cells[6].querySelector("input").value || "";
-        dataToSave.push({shift, hours, note});
-    });
-
-    localStorage.setItem("otData", JSON.stringify(dataToSave));
-}
-
-function resetTable(){
-    localStorage.removeItem("otData");
-    location.reload();
-}
-
-// สร้างตาราง
-createTable();
-calculateHours();
 </script>
 
 </body>
 </html>
+      
