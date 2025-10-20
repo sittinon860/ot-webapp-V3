@@ -6,27 +6,40 @@
 <title>โน็ตบันทึกชั่วโมงOT รอบวันที่16-15</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-body{ font-family: Arial; margin:5px; background:linear-gradient(135deg,#f0f4ff,#d9e8ff);}
-h2{text-align:center; color:#0d47a1;}
-.controls, .checkbox-container{ display:flex; flex-wrap:wrap; gap:5px; justify-content:center; margin-bottom:5px;}
-table{width:100%; border-collapse:collapse; font-size:11px; background:white; border-radius:12px; overflow:hidden; box-shadow:0 5px 15px rgba(0,0,0,0.2);}
-th, td{border:1px solid #ddd; text-align:center; padding:3px; vertical-align:middle;}
-th{background:linear-gradient(to bottom,#1976d2,#42a5f5); color:white;}
-.holiday-personal{background:#ffd3d3; font-weight:bold;}
-.holiday-ot{background:#fff3b2; font-weight:bold;}
-input[type=number]{width:50px;}
-input[type=text]{width:100%;}
-.summary{text-align:center; font-weight:bold; margin-bottom:10px; background:linear-gradient(to right,#a8ff78,#78ffd6); padding:5px 10px; border-radius:12px; box-shadow:1px 2px 6px rgba(0,0,0,0.2);}
-.modal{display:none; position:fixed; z-index:100; left:0; top:0; width:100%; height:100%; overflow:auto; background-color: rgba(0,0,0,0.6);}
-.modal-content{background-color: #fefefe; margin:5% auto; padding:20px; border-radius: 12px; width:90%; max-width:800px; box-shadow:0 4px 8px rgba(0,0,0,0.2);}
-.close-btn{color:#aaa; float:right; font-size:28px; font-weight:bold; cursor:pointer;}
-.close-btn:hover{color:#000;}
-.chart-container{position:relative; height:400px; width:100%;}
+body { font-family: Arial,sans-serif; margin:5px; background:linear-gradient(135deg,#f0f4ff,#d9e8ff);}
+h2{ text-align:center; color:#0d47a1; text-shadow:1px 1px 2px #aaa; margin-bottom:5px;}
+.instructions{ background:#e3f2fd; border-left:4px solid #1976d2; padding:5px 10px; margin-bottom:5px; font-size:12px;}
+.controls{ display:flex; flex-wrap:wrap; gap:5px; align-items:center; justify-content:center; margin-bottom:5px;}
+select,button{ padding:5px 8px; font-size:13px; border-radius:8px; border:1px solid #1976d2; background:linear-gradient(to bottom,#42a5f5,#1e88e5); color:white; cursor:pointer;}
+#resetBtn{ background:linear-gradient(to bottom,#f44336,#d32f2f);}
+#showChartBtn{ background:linear-gradient(to bottom,#ff9800,#f57c00);}
+.checkbox-container{ display:flex; flex-wrap:wrap; justify-content:center; gap:3px; font-size:12px; margin-bottom:5px;}
+.summary{ text-align:center; background:linear-gradient(to right,#a8ff78,#78ffd6); padding:5px 10px; border-radius:12px; font-weight:bold; font-size:12px; box-shadow:1px 2px 6px rgba(0,0,0,0.2); margin-bottom:10px;}
+table{ width:100%; border-collapse:collapse; background:white; font-size:11px; border-radius:12px; overflow:hidden; box-shadow:0 5px 15px rgba(0,0,0,0.2);}
+th,td{ border:1px solid #ddd; padding:3px; text-align:center; vertical-align:middle;}
+th{ background:linear-gradient(to bottom,#1976d2,#42a5f5); color:white;}
+.holiday-personal{ background:#ffd3d3; border-left:4px solid #ff1744; font-weight:bold;}
+.holiday-ot{ background:#fff3b2; border-left:4px solid #ffc400; font-weight:bold;}
+input[type="number"], input[type="text"], select{ width:100%; padding:2px; font-size:11px; border-radius:6px; border:1px solid #1976d2;}
+.modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);}
+.modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border-radius: 12px; width: 90%; max-width: 800px;}
+.close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor:pointer;}
+.chart-container { position: relative; height: 400px; width: 100%;}
 </style>
 </head>
 <body>
 
 <h2>โน็ตบันทึกชั่วโมงOT รอบวันที่16-15</h2>
+
+<div class="instructions">
+<b>วิธีใช้งาน:</b><br>
+1. เลือกวันหยุดส่วนตัวที่ต้องการ<br>
+2. เลือกกะ (N1, D1, HD1, HN1)<br>
+3. กรอกจำนวนชั่วโมง OT<br>
+4. ระบบคำนวณ OT1 / OT1.5 / OT3 อัตโนมัติ<br>
+5. กด "ล้างข้อมูลเดือนนี้" เพื่อรีเซ็ต<br>
+6. ข้อมูลทั้งหมดบันทึกอัตโนมัติใน LocalStorage
+</div>
 
 <div class="controls">
 เดือน: <select id="month"></select>
@@ -37,20 +50,24 @@ input[type=text]{width:100%;}
 
 <div class="checkbox-container">
 วันหยุดส่วนตัว:
-<label><input type="checkbox" value="1">จันทร์</label>
-<label><input type="checkbox" value="2">อังคาร</label>
-<label><input type="checkbox" value="3">พุธ</label>
-<label><input type="checkbox" value="4">พฤหัส</label>
-<label><input type="checkbox" value="5">ศุกร์</label>
-<label><input type="checkbox" value="6">เสาร์</label>
-<label><input type="checkbox" value="0">อาทิตย์</label>
+<label><input type="checkbox" value="1"> จันทร์</label>
+<label><input type="checkbox" value="2"> อังคาร</label>
+<label><input type="checkbox" value="3"> พุธ</label>
+<label><input type="checkbox" value="4"> พฤหัส</label>
+<label><input type="checkbox" value="5"> ศุกร์</label>
+<label><input type="checkbox" value="6"> เสาร์</label>
+<label><input type="checkbox" value="0"> อาทิตย์</label>
 </div>
 
 <div class="summary" id="summary">รวม OT1:0 | OT1.5:0 | OT3:0</div>
 
 <table id="otTable">
 <thead>
-<tr><th>วันที่</th><th>วัน</th><th>กะ</th><th>ชั่วโมง OT</th><th>OT1</th><th>OT1.5</th><th>OT3</th><th>เวลาเข้า–ออก</th><th>หมายเหตุ</th></tr>
+<tr>
+<th>วันที่</th><th>วัน</th><th>กะ</th><th>ชั่วโมง OT</th>
+<th>OT1</th><th>OT1.5</th><th>OT3</th>
+<th>เวลาเข้า–ออก</th><th>หมายเหตุ</th>
+</tr>
 </thead>
 <tbody></tbody>
 </table>
@@ -74,145 +91,144 @@ const yearSelect=document.getElementById("year");
 const tbody=document.getElementById("otTable").querySelector("tbody");
 const summary=document.getElementById("summary");
 const checkboxes=document.querySelectorAll(".checkbox-container input[type=checkbox]");
-const resetBtn=document.getElementById("resetBtn");
-const showChartBtn=document.getElementById("showChartBtn");
 const modal = document.getElementById("chartModal");
-const closeBtn = modal.querySelector(".close-btn");
-const otChartCanvas=document.getElementById("otChart");
+const btn = document.getElementById("showChartBtn");
+const span = document.getElementsByClassName("close-btn")[0];
 let userHolidays=[];
-let otChartInstance=null;
+let otChartInstance = null;
 
-// สร้าง dropdown เดือน/ปี
+// โหลด dropdown เดือน/ปี
+for(let m=0;m<12;m++){
+  const opt=document.createElement("option"); opt.value=m; opt.text=monthNamesTH[m]; monthSelect.appendChild(opt);}
+const currentYear=new Date().getFullYear();
+for(let y=currentYear-2;y<=currentYear+2;y++){
+  const opt=document.createElement("option"); opt.value=y; opt.text=y; yearSelect.appendChild(opt);}
+  
+// โหลดเดือน/ปีล่าสุดจาก localStorage หรือใช้ปัจจุบัน
 const today=new Date();
-for(let m=0;m<12;m++){ let opt=document.createElement("option"); opt.value=m; opt.text=monthNamesTH[m]; monthSelect.appendChild(opt);}
-for(let y=today.getFullYear()-2;y<=today.getFullYear()+2;y++){ let opt=document.createElement("option"); opt.value=y; opt.text=y; yearSelect.appendChild(opt);}
-monthSelect.value=today.getMonth(); yearSelect.value=today.getFullYear();
+let savedMonth = localStorage.getItem("ot_lastMonth");
+let savedYear = localStorage.getItem("ot_lastYear");
+let initialMonth = savedMonth!==null?parseInt(savedMonth):today.getMonth();
+let initialYear = savedYear!==null?parseInt(savedYear):today.getFullYear();
+monthSelect.value=initialMonth; yearSelect.value=initialYear;
 
-function getKeyData(year,month){ return `otData_${year}-${month+1}`;}
-function getKeyHoliday(){ return `holidays_${yearSelect.value}-${parseInt(monthSelect.value)+1}`;}
+// บันทึกเดือน/ปีล่าสุดเมื่อเปลี่ยน
+monthSelect.addEventListener("change",()=>{ localStorage.setItem("ot_lastMonth", monthSelect.value); createTable(); });
+yearSelect.addEventListener("change",()=>{ localStorage.setItem("ot_lastYear", yearSelect.value); createTable(); });
 
+// ฟังก์ชัน key localStorage
+function getKeyData(year,month){ if(!year) year=yearSelect.value; if(!month) month=monthSelect.value; return `otData_${year}-${parseInt(month)+1}`; }
+function getKeyHoliday(){ return `holidays_${yearSelect.value}-${parseInt(monthSelect.value)+1}`; }
+
+// โหลดวันหยุดส่วนตัว
 function loadHolidays(){
     const saved=JSON.parse(localStorage.getItem(getKeyHoliday())||"[]");
     checkboxes.forEach(cb=>cb.checked=saved.includes(parseInt(cb.value)));
     userHolidays=Array.from(checkboxes).filter(cb=>cb.checked).map(cb=>parseInt(cb.value));
 }
-function saveHolidays(){ localStorage.setItem(getKeyHoliday(),JSON.stringify(userHolidays)); }
+checkboxes.forEach(cb=>cb.addEventListener("change",()=>{
+    userHolidays=Array.from(checkboxes).filter(c=>c.checked).map(c=>parseInt(c.value));
+    localStorage.setItem(getKeyHoliday(),JSON.stringify(userHolidays));
+    createTable();
+}));
+document.getElementById("resetBtn").addEventListener("click",()=>{
+    if(confirm("คุณต้องการล้างข้อมูล OT และวันหยุดส่วนตัวสำหรับรอบเดือนนี้ ใช่หรือไม่?")){
+        localStorage.removeItem(getKeyData()); 
+        localStorage.removeItem(getKeyHoliday());
+        createTable();
+    }
+});
 
+// สร้างตาราง
 function createTable(){
-    tbody.innerHTML=""; loadHolidays();
+    tbody.innerHTML="";
+    loadHolidays();
     const currentMonth=parseInt(monthSelect.value);
     const currentYear=parseInt(yearSelect.value);
-    let startDate=new Date(currentYear,currentMonth,16);
-    let endMonth=currentMonth+1,endYear=currentYear;if(endMonth>11){endMonth=0; endYear++;}
+    let startDate = new Date(currentYear,currentMonth,16);
+    let endMonth = currentMonth+1; let endYear=currentYear;
+    if(endMonth>11){ endMonth=0; endYear+=1; }
     let endDate=new Date(endYear,endMonth,15);
-    const savedData=JSON.parse(localStorage.getItem(getKeyData(currentYear,currentMonth))||"[]");
+    const savedData=JSON.parse(localStorage.getItem(getKeyData())||"[]");
     let current=new Date(startDate);
     while(current<=endDate){
         const tr=document.createElement("tr");
         const day=current.getDay();
         const thYear=current.getFullYear()+543;
         const formattedDate=`${current.getDate().toString().padStart(2,'0')}/${(current.getMonth()+1).toString().padStart(2,'0')}/${thYear}`;
-        tr.innerHTML=`<td>${formattedDate}</td><td>${dayNames[day]}</td>
-        <td class="td-shift"><select><option value=""></option><option value="N1">N1</option><option value="D1">D1</option><option value="HD1">HD1</option><option value="HN1">HN1</option></select></td>
-        <td><input type="number" min="0" max="12" step="0.5" style="display:none"></td>
-        <td></td><td></td><td></td>
-        <td></td><td><input type="text"></td>`;
+        const tdDate=document.createElement("td"); tdDate.textContent=formattedDate; tr.appendChild(tdDate);
+        const tdDay=document.createElement("td"); tdDay.textContent=dayNames[day]; tr.appendChild(tdDay);
+        const tdShift=document.createElement("td"); 
+        const selectShift=document.createElement("select");
+        ["","N1","D1","HD1","HN1"].forEach(v=>{ const opt=document.createElement("option"); opt.value=v; opt.text=v; selectShift.appendChild(opt); });
+        tdShift.appendChild(selectShift); tr.appendChild(tdShift);
+        const tdHours=document.createElement("td"); const inputHours=document.createElement("input"); inputHours.type="number"; inputHours.min=0; inputHours.max=12; inputHours.step=0.5; tdHours.appendChild(inputHours); tr.appendChild(tdHours);
+        const tdOT1=document.createElement("td"), tdOT15=document.createElement("td"), tdOT3=document.createElement("td"); tr.appendChild(tdOT1); tr.appendChild(tdOT15); tr.appendChild(tdOT3);
+        const tdTime=document.createElement("td"); tr.appendChild(tdTime);
+        const tdNote=document.createElement("td"); const inputNote=document.createElement("input"); inputNote.type="text"; tdNote.appendChild(inputNote); tr.appendChild(tdNote);
         if(userHolidays.includes(day)) tr.classList.add("holiday-personal");
         tbody.appendChild(tr);
 
-        const shiftSel=tr.cells[2].querySelector("select");
-        const hoursInp=tr.cells[3].querySelector("input");
-        const noteInp=tr.cells[8].querySelector("input");
-
-        const existing=savedData.find(d=>d.date===formattedDate);
-        if(existing){
-            shiftSel.value=existing.shift; if(shiftSel.value) hoursInp.style.display="inline-block";
-            hoursInp.value=existing.hours||""; tr.cells[4].textContent=existing.ot1||""; tr.cells[5].textContent=existing.ot15||""; tr.cells[6].textContent=existing.ot3||""; tr.cells[7].textContent=existing.time||""; noteInp.value=existing.note||"";
-            if(existing.shift==="HD1"||existing.shift==="HN1"){ tr.classList.remove("holiday-personal"); tr.classList.add("holiday-ot"); }
+        // โหลดข้อมูลที่บันทึกไว้
+        const idx=savedData.findIndex(d=>d.date===formattedDate);
+        if(idx>=0){
+            const d=savedData[idx];
+            selectShift.value=d.shift; if(d.shift) inputHours.value=d.hours;
+            tdOT1.textContent=d.ot1||""; tdOT15.textContent=d.ot15||""; tdOT3.textContent=d.ot3||"";
+            tdTime.textContent=d.time||""; inputNote.value=d.note||"";
+            if(d.shift=="HD1"||d.shift=="HN1"){ tr.classList.remove("holiday-personal"); tr.classList.add("holiday-ot"); }
         }
 
-        function updateRow(){
-            const shift=shiftSel.value; const hours=parseFloat(hoursInp.value||0);
-            let ot1=0, ot15=0, ot3=0, startTime="";
-            if(shift){ hoursInp.style.display="inline-block"; } else { hoursInp.style.display="none"; hoursInp.value=""; noteInp.value=""; }
-            if(shift==="N1"){ ot15=hours; startTime="03:45"; if(hours<=3) noteInp.value="ตัดกลับ"; }
-            else if(shift==="D1"){ ot15=hours; startTime="15:45"; if(hours<=3) noteInp.value="ตัดกลับ"; }
-            else if(shift==="HD1"){ startTime="07:45"; ot1=hours>8?8:hours; ot3=hours>8?hours-8:0; noteInp.value="OT วันหยุด"; tr.classList.add("holiday-ot"); tr.classList.remove("holiday-personal"); }
-            else if(shift==="HN1"){ startTime="19:45"; ot1=hours>8?8:hours; ot3=hours>8?hours-8:0; noteInp.value="OT วันหยุด"; tr.classList.add("holiday-ot"); tr.classList.remove("holiday-personal"); }
-            if(startTime) tr.cells[7].textContent=`${startTime} – ${addHours(startTime,hours)}`;
-            tr.cells[4].textContent=ot1?ot1.toFixed(2):""; tr.cells[5].textContent=ot15?ot15.toFixed(2):""; tr.cells[6].textContent=ot3?ot3.toFixed(2):"";
-            saveTable(); updateSummary();
-        }
-        shiftSel.addEventListener("change",updateRow);
-        hoursInp.addEventListener("input",updateRow);
+        // Event listener
+        selectShift.addEventListener("change",()=>{ updateRow(tr,selectShift,inputHours,current); });
+        inputHours.addEventListener("input",()=>{ updateRow(tr,selectShift,inputHours,current); });
         current.setDate(current.getDate()+1);
     }
     updateSummary();
 }
 
-function addHours(start,h){ let [hh,mm]=start.split(":").map(Number); let total=(hh*60)+mm+Math.round(h*60); let newH=Math.floor(total/60)%24; let newM=total%60; return `${newH.toString().padStart(2,'0')}:${newM.toString().padStart(2,'0')}`; }
-
-function updateSummary(){
-    let ot1=0, ot15=0, ot3=0;
-    tbody.querySelectorAll("tr").forEach(tr=>{ ot1+=parseFloat(tr.cells[4].textContent||0); ot15+=parseFloat(tr.cells[5].textContent||0); ot3+=parseFloat(tr.cells[6].textContent||0); });
-    summary.textContent=`รวม OT1:${ot1.toFixed(2)} | OT1.5:${ot15.toFixed(2)} | OT3:${ot3.toFixed(2)}`;
+function updateRow(tr,selectShift,inputHours,current){
+    const tds=tr.querySelectorAll("td");
+    const shift=selectShift.value;
+    const hours=parseFloat(inputHours.value||0);
+    const tdOT1=tds[4], tdOT15=tds[5], tdOT3=tds[6], tdTime=tds[7], tdNote=tds[8].querySelector("input");
+    let ot1=0, ot15=0, ot3=0, startTime="";
+    tdOT1.textContent=""; tdOT15.textContent=""; tdOT3.textContent=""; tdTime.textContent="";
+    if(hours>0){
+        if(shift=="N1"||shift=="D1"){ ot15=hours; startTime=(shift=="N1")?"03:45":"15:45"; if(hours<=3) tdNote.value="ตัดกลับ"; }
+        else if(shift=="HD1"||shift=="HN1"){ startTime=(shift=="HD1")?"07:45":"19:45"; if(hours<=8) ot1=hours; else{ ot1=8; ot3=hours-8;} tdNote.value="OT วันหยุด"; }
+        if(startTime) tdTime.textContent=`${startTime} – ${addHours(startTime,hours)}`;
+    }
+    tdOT1.textContent=ot1?ot1.toFixed(2):"";
+    tdOT15.textContent=ot15?ot15.toFixed(2):"";
+    tdOT3.textContent=ot3?ot3.toFixed(2):"";
+    saveData(); updateSummary();
 }
 
-function saveTable(){
-    const data=[];
-    tbody.querySelectorAll("tr").forEach(tr=>{
-        const date=tr.cells[0].textContent;
-        const shift=tr.cells[2].querySelector("select").value;
-        const hours=parseFloat(tr.cells[3].querySelector("input").value||0);
-        const ot1=parseFloat(tr.cells[4].textContent||0);
-        const ot15=parseFloat(tr.cells[5].textContent||0);
-        const ot3=parseFloat(tr.cells[6].textContent||0);
-        const time=tr.cells[7].textContent;
-        const note=tr.cells[8].querySelector("input").value;
-        data.push({date,shift,hours,ot1,ot15,ot3,time,note});
-    });
-    localStorage.setItem(getKeyData(yearSelect.value,monthSelect.value),JSON.stringify(data));
-}
+function addHours(start,h){ let [hh,mm]=start.split(":").map(Number); let totalMinutes=(hh*60)+mm+Math.round(h*60); let newH=Math.floor(totalMinutes/60)%24; let newM=totalMinutes%60; return `${newH.toString().padStart(2,'0')}:${newM.toString().padStart(2,'0')}`; }
+function updateSummary(){ let ot1=0,ot15=0,ot3=0; tbody.querySelectorAll("tr").forEach(tr=>{ ot1+=parseFloat(tr.cells[4].textContent||0); ot15+=parseFloat(tr.cells[5].textContent||0); ot3+=parseFloat(tr.cells[6].textContent||0); }); summary.textContent=`รวม OT1:${ot1.toFixed(2)} | OT1.5:${ot15.toFixed(2)} | OT3:${ot3.toFixed(2)}`; }
+function saveData(){ const data=[]; tbody.querySelectorAll("tr").forEach(tr=>{ const date=tr.cells[0].textContent; const shift=tr.cells[2].querySelector("select").value; const hours=parseFloat(tr.cells[3].querySelector("input").value||0); const ot1=tr.cells[4].textContent; const ot15=tr.cells[5].textContent; const ot3=tr.cells[6].textContent; const time=tr.cells[7].textContent; const note=tr.cells[8].querySelector("input").value; data.push({date,shift,hours,ot1,ot15,ot3,time,note}); }); localStorage.setItem(getKeyData(),JSON.stringify(data)); }
 
-// Event เดือน/ปี
-monthSelect.addEventListener("change",()=>{ createTable(); });
-yearSelect.addEventListener("change",()=>{ createTable(); });
-
-// Event วันหยุด
-checkboxes.forEach(cb=>cb.addEventListener("change",()=>{ userHolidays=Array.from(checkboxes).filter(c=>c.checked).map(c=>parseInt(c.value)); saveHolidays(); createTable(); }));
-
-// ล้างข้อมูล
-resetBtn.addEventListener("click",()=>{ if(confirm("คุณต้องการล้างข้อมูลเดือนนี้?")){ localStorage.removeItem(getKeyData(yearSelect.value,monthSelect.value)); localStorage.removeItem(getKeyHoliday()); createTable(); }});
-
-// กราฟ
-showChartBtn.addEventListener("click",()=>{
-    modal.style.display="block";
-    const months=Array.from({length:12},(_,i)=>i);
-    const ot1Data=[], ot15Data=[], ot3Data=[];
-    months.forEach(m=>{
-        const data=JSON.parse(localStorage.getItem(getKeyData(yearSelect.value,m))||"[]");
-        ot1Data.push(data.reduce((a,d)=>a+(parseFloat(d.ot1)||0),0));
-        ot15Data.push(data.reduce((a,d)=>a+(parseFloat(d.ot15)||0),0));
-        ot3Data.push(data.reduce((a,d)=>a+(parseFloat(d.ot3)||0),0));
-    });
+// Modal และ Chart
+btn.onclick=function(){
+    const labels=[], ot1Data=[], ot15Data=[], ot3Data=[];
+    for(let m=0;m<12;m++){
+        const key=getKeyData(yearSelect.value,m); const saved=JSON.parse(localStorage.getItem(key)||"[]");
+        let ot1=0,ot15=0,ot3=0; saved.forEach(d=>{ ot1+=parseFloat(d.ot1||0); ot15+=parseFloat(d.ot15||0); ot3+=parseFloat(d.ot3||0); });
+        labels.push(monthNamesTH[m]); ot1Data.push(ot1); ot15Data.push(ot15); ot3Data.push(ot3);
+    }
+    const ctx=document.getElementById('otChart').getContext('2d');
     if(otChartInstance) otChartInstance.destroy();
-    otChartInstance=new Chart(otChartCanvas,{
-        type:'bar',
-        data:{
-            labels:monthNamesTH,
-            datasets:[
-                {label:"OT1", data:ot1Data, backgroundColor:"#42a5f5"},
-                {label:"OT1.5", data:ot15Data, backgroundColor:"#ffca28"},
-                {label:"OT3", data:ot3Data, backgroundColor:"#ef5350"}
-            ]
-        },
-        options:{ responsive:true, plugins:{ legend:{position:'top'} } }
-    });
-});
-closeBtn.addEventListener("click",()=>{ modal.style.display="none"; });
-window.addEventListener("click",e=>{ if(e.target===modal) modal.style.display="none"; });
+    otChartInstance=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[
+        {label:'OT1',data:ot1Data,backgroundColor:'rgba(255,99,132,0.8)'},
+        {label:'OT1.5',data:ot15Data,backgroundColor:'rgba(54,162,235,0.8)'},
+        {label:'OT3',data:ot3Data,backgroundColor:'rgba(75,192,192,0.8)'}
+    ]}, options:{responsive:true,plugins:{title:{display:true,text:`ชั่วโมง OT รายปี ${yearSelect.value}`}},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}}}});
+    modal.style.display="block";
+}
+span.onclick=function(){ modal.style.display="none"; }
+window.onclick=function(event){ if(event.target==modal) modal.style.display="none"; }
 
-// เริ่มต้น
 createTable();
 });
 </script>
