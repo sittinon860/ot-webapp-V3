@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ทดลองบันทึก OT + สำรองอัตโนมัติ</title>
+<style>
+body{font-family:Arial,sans-serif;margin:10px;background:#f0f4ff;}
+h2{text-align:center;color:#0d47a1;margin-bottom:10px;}
+table{width:100%;border-collapse:collapse;margin-bottom:10px;}
+th,td{border:1px solid #ccc;padding:5px;text-align:center;}
+button{padding:5px 10px;margin:5px;cursor:pointer;border-radius:6px;background:#1976d2;color:white;border:none;}
+button:hover{background:#1565c0;}
+.summary{margin-bottom:10px;font-weight:bold;}
+#restoreBtn{display:none;background:#ff9800;}
+</style>
+</head>
+<body>
+
+<h2>ทดลองบันทึก OT เวอร์ชั่นสำรองอัตโนมัติ</h2>
+
+<div class="summary" id="summary">OT: 0 ชั่วโมง</div>
+
+<table id="otTable">
+<thead>
+<tr>
+<th>วันที่</th>
+<th>กะ</th>
+<th>ชั่วโมง OT</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>16/10/2568</td>
+<td>
+<select>
+<option value="">--</option>
+<option value="N1">N1</option>
+<option value="D1">D1</option>
+<option value="HD1">HD1</option>
+<option value="HN1">HN1</option>
+</select>
+</td>
+<td><input type="number" min="0" max="12" step="0.5"></td>
+</tr>
+</tbody>
+</table>
+
+<button id="restoreBtn">โหลดข้อมูลสำรอง</button>
+
+<script>
+// IndexedDB setup
+let db;
+const request = indexedDB.open("OTBackupDB", 1);
+request.onupgradeneeded = function(event){
+  db = event.target.result;
+  if(!db.objectStoreNames.contains("otData")){
+    db.createObjectStore("otData", {keyPath:"id"});
+  }
+};
+request.onsuccess = function(event){
+  db = event.target.result;
+  checkBackupExists();
+  loadTable();
+};
+request.onerror = function(event){ console.error("DB error",event); }
+
+// บันทึกข้อมูลไป IndexedDB
+function saveBackup(){
+  if(!db) return;
+  const tx = db.transaction("otData","readwrite");
+  const store = tx.objectStore("otData");
+  const rows = Array.from(document.querySelectorAll("#otTable tbody tr")).map((tr,i)=>{
+    return {id:i, date:tr.cells[0].textContent, shift:tr.cells[1].querySelector("select").value, hours:parseFloat(tr.cells[2].querySelector("input").value||0)};
+  });
+  store.put({id:0,data:rows});
+}
+
+// โหลดข้อมูลจาก IndexedDB
+function loadBackup(){
+  if(!db) return;
+  const tx = db.transaction("otData","readonly");
+  const store = tx.objectStore("otData");
+  const req = store.get(0);
+  req.onsuccess = function(){
+    if(req.result){
+      const rows = req.result.data;
+      const tbody = document.querySelector("#otTable tbody");
+      tbody.innerHTML="";
+      rows.forEach(r=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML=`<td>${r.date}</td>
+        <td><select>
+          <option value="">--</option>
+          <option value="N1">N1</option>
+          <option value="D1">D1</option>
+          <option value="HD1">HD1</option>
+          <option value="HN1">HN1</option>
+        </select></td>
+        <td><input type="number" min="0" max="12" step="0.5"></td>`;
+        tbody.appendChild(tr);
+        tr.cells[1].querySelector("select").value = r.shift;
+        tr.cells[2].querySelector("input").value = r.hours;
+      });
+      updateSummary();
+    }
+  }
+}
+
+// เช็คว่ามี backup อยู่หรือไม่
+function checkBackupExists(){
+  if(!db) return;
+  const tx = db.transaction("otData","readonly");
+  const store = tx.objectStore("otData");
+  const req = store.get(0);
+  req.onsuccess = function(){
+    if(req.result){
+      document.getElementById("restoreBtn").style.display="inline-block";
+    }
+  }
+}
+
+// อัพเดทสรุป OT
+function updateSummary(){
+  let total=0;
+  document.querySelectorAll("#otTable tbody tr").forEach(tr=>{
+    total += parseFloat(tr.cells[2].querySelector("input").value||0);
+  });
+  document.getElementById("summary").textContent=`OT: ${total} ชั่วโมง`;
+}
+
+// โหลดตารางจาก LocalStorage (ถ้ามี)
+function loadTable(){
+  const saved = JSON.parse(localStorage.getItem("otData")||"[]");
+  if(saved.length>0){
+    const tbody = document.querySelector("#otTable tbody");
+    tbody.innerHTML="";
+    saved.forEach(r=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML=`<td>${r.date}</td>
+      <td><select>
+        <option value="">--</option>
+        <option value="N1">N1</option>
+        <option value="D1">D1</option>
+        <option value="HD1">HD1</option>
+        <option value="HN1">HN1</option>
+      </select></td>
+      <td><input type="number" min="0" max="12" step="0.5"></td>`;
+      tbody.appendChild(tr);
+      tr.cells[1].querySelector("select").value = r.shift;
+      tr.cells[2].querySelector("input").value = r.hours;
+    });
+    updateSummary();
+  }
+}
+
+// Event listeners
+document.querySelectorAll("#otTable tbody tr input, #otTable tbody tr select").forEach(el=>{
+  el.addEventListener("input", ()=>{
+    updateSummary();
+    // บันทึก localStorage
+    const rows = Array.from(document.querySelectorAll("#otTable tbody tr")).map(tr=>{
+      return {date:tr.cells[0].textContent, shift:tr.cells[1].querySelector("select").value, hours:parseFloat(tr.cells[2].querySelector("input").value||0)};
+    });
+    localStorage.setItem("otData",JSON.stringify(rows));
+    saveBackup(); // บันทึก backup
+  });
+});
+
+// ปุ่ม restore
+document.getElementById("restoreBtn").addEventListener("click",()=>{
+  loadBackup();
+});
+
+// บันทึกอัตโนมัติเมื่อปิดเว็บ
+window.addEventListener("beforeunload", saveBackup);
+</script>
+
+</body>
+</html>
