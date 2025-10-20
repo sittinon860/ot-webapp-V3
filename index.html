@@ -3,119 +3,107 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ทดลอง OT เวอร์ชั่นสำรอง</title>
+<title>ทดลองบันทึก OT พร้อมสำรองข้อมูล</title>
 <style>
-body { font-family: Arial, sans-serif; margin: 10px; background:#f0f4ff; }
-h2 { text-align:center; color:#0d47a1; }
-table { width:100%; border-collapse: collapse; margin-top:10px; }
-th, td { border:1px solid #ccc; padding:5px; text-align:center; }
-button { padding:5px 10px; margin:5px; cursor:pointer; }
+body{ font-family: Arial,sans-serif; margin:20px; background:#f0f4ff;}
+h2{ text-align:center; color:#0d47a1;}
+table{ width:100%; border-collapse: collapse; margin-top:10px;}
+th,td{ border:1px solid #ccc; padding:8px; text-align:center;}
+button{ padding:5px 10px; margin:5px; cursor:pointer; }
+#backupBtn{ background:#4caf50; color:white; }
+#restoreBtn{ background:#ff9800; color:white; }
 </style>
 </head>
 <body>
-<h2>ทดลอง OT เวอร์ชั่นสำรอง</h2>
+
+<h2>ทดลองบันทึก OT (เวอร์ชั่นทดลอง)</h2>
 
 <div>
-<button id="saveBtn">บันทึก OT</button>
-<button id="loadBackupBtn">โหลดข้อมูลสำรอง</button>
-<button id="clearBtn">ล้าง LocalStorage</button>
+<button id="backupBtn">สำรองข้อมูลอัตโนมัติ</button>
+<button id="restoreBtn">โหลดข้อมูลสำรอง</button>
 </div>
 
-<table>
+<table id="otTable">
 <thead>
-<tr><th>วันที่</th><th>ชั่วโมง OT</th><th>หมายเหตุ</th></tr>
+<tr>
+<th>วันที่</th>
+<th>ชั่วโมง OT</th>
+</tr>
 </thead>
 <tbody>
 <tr>
-<td><input type="date" id="otDate"></td>
-<td><input type="number" id="otHours" min="0" max="12" step="0.5"></td>
-<td><input type="text" id="otNote"></td>
+<td>16/10/2025</td>
+<td><input type="number" min="0" max="12" step="0.5"></td>
 </tr>
 </tbody>
 </table>
 
 <script>
-const otDate = document.getElementById('otDate');
-const otHours = document.getElementById('otHours');
-const otNote = document.getElementById('otNote');
-
-const saveBtn = document.getElementById('saveBtn');
-const loadBackupBtn = document.getElementById('loadBackupBtn');
-const clearBtn = document.getElementById('clearBtn');
-
-// IndexedDB Setup
+// ------------------- IndexedDB -------------------
 let db;
 const request = indexedDB.open("OTBackupDB",1);
-request.onerror = e => console.log("DB Error", e);
-request.onsuccess = e => { db = e.target.result; loadFromLocalStorage(); };
-request.onupgradeneeded = e => { 
-  db = e.target.result;
-  if(!db.objectStoreNames.contains("otBackup")){
-    db.createObjectStore("otBackup",{ keyPath: "id" });
-  }
-};
 
-// ฟังก์ชันบันทึก
-function saveData(){
-  const data = {
-    id: 1,
-    date: otDate.value,
-    hours: parseFloat(otHours.value||0),
-    note: otNote.value
-  };
-  // บันทึก LocalStorage
-  localStorage.setItem("otData", JSON.stringify(data));
-  // บันทึก IndexedDB
-  const tx = db.transaction(["otBackup"],"readwrite");
-  const store = tx.objectStore("otBackup");
-  store.put(data);
-  console.log("บันทึกสำเร็จ");
+request.onerror = function(event){ console.log("DB error", event); }
+request.onupgradeneeded = function(event){
+    db = event.target.result;
+    if(!db.objectStoreNames.contains("otBackup")){
+        db.createObjectStore("otBackup",{ keyPath:"id" });
+    }
+}
+request.onsuccess = function(event){ db = event.target.result; console.log("DB ready"); }
+
+// ------------------- ฟังก์ชัน -------------------
+const otTable = document.getElementById("otTable");
+const inputOT = otTable.querySelector("input");
+
+// โหลดจาก LocalStorage
+function loadFromLocalStorage(){
+    const saved = JSON.parse(localStorage.getItem("otData")||"{}");
+    if(saved.hours !== undefined){
+        inputOT.value = saved.hours;
+    }
 }
 
-// โหลดข้อมูล LocalStorage
-function loadFromLocalStorage(){
-  const saved = localStorage.getItem("otData");
-  if(saved){
-    const data = JSON.parse(saved);
-    otDate.value = data.date;
-    otHours.value = data.hours;
-    otNote.value = data.note;
-  }
+// บันทึกไป LocalStorage + IndexedDB
+function saveData(){
+    const hours = parseFloat(inputOT.value||0);
+    const data = { id:1, hours };
+    localStorage.setItem("otData", JSON.stringify(data));
+    // IndexedDB
+    if(db){
+        const tx = db.transaction("otBackup","readwrite");
+        const store = tx.objectStore("otBackup");
+        store.put(data);
+        tx.oncomplete = ()=>console.log("IndexedDB backup complete");
+    }
 }
 
 // โหลดข้อมูลสำรองจาก IndexedDB
-function loadBackup(){
-  const tx = db.transaction(["otBackup"],"readonly");
-  const store = tx.objectStore("otBackup");
-  const getReq = store.get(1);
-  getReq.onsuccess = () => {
-    if(getReq.result){
-      const data = getReq.result;
-      otDate.value = data.date;
-      otHours.value = data.hours;
-      otNote.value = data.note;
-      // บันทึกกลับ LocalStorage
-      localStorage.setItem("otData", JSON.stringify(data));
-      alert("โหลดข้อมูลสำรองเรียบร้อย");
-    } else {
-      alert("ยังไม่มีข้อมูลสำรอง");
+function restoreData(){
+    if(db){
+        const tx = db.transaction("otBackup","readonly");
+        const store = tx.objectStore("otBackup");
+        const req = store.get(1);
+        req.onsuccess = function(e){
+            if(req.result){
+                inputOT.value = req.result.hours;
+                localStorage.setItem("otData", JSON.stringify(req.result));
+                alert("โหลดข้อมูลสำรองเรียบร้อย!");
+            } else {
+                alert("ยังไม่มีข้อมูลสำรอง");
+            }
+        }
     }
-  }
 }
 
-// Event Listeners
-saveBtn.addEventListener("click", saveData);
-loadBackupBtn.addEventListener("click", loadBackup);
-clearBtn.addEventListener("click", ()=>{
-  localStorage.removeItem("otData");
-  otDate.value=""; otHours.value=""; otNote.value="";
-  alert("LocalStorage ถูกล้างแล้ว");
-});
+// ------------------- Event -------------------
+inputOT.addEventListener("input", saveData);
+document.getElementById("backupBtn").addEventListener("click", saveData);
+document.getElementById("restoreBtn").addEventListener("click", restoreData);
 
-// อัตโนมัติเมื่อแก้ไข
-[otDate, otHours, otNote].forEach(el=>{
-  el.addEventListener("change", saveData);
-});
+// โหลดข้อมูล LocalStorage ตอนเริ่มเว็บ
+window.onload = loadFromLocalStorage;
 </script>
+
 </body>
-</html>
+</html> 
