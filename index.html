@@ -3,28 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>โน็ตบันทึกชั่วโมงOT รอบวันที่16-15</title>
+<title>โน็ตบันทึกชั่วโมงOT รอบวันที่16-15 (ดู OT รายปี)</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
 <style>
+* { box-sizing: border-box; }
 body { font-family: Arial,sans-serif; margin:5px; background:linear-gradient(135deg,#f0f4ff,#d9e8ff);}
 h2{ text-align:center; color:#0d47a1; text-shadow:1px 1px 2px #aaa; margin-bottom:5px;}
-.instructions{ background:#e3f2fd; border-left:4px solid #1976d2; padding:5px 10px; margin-bottom:5px; font-size:12px;}
+.instructions{ background:#e3f2fd; border-left:4px solid #1976d2; padding:5px 10px; margin-bottom:5px; font-size:12px; line-height:1.4;}
+.credit{ text-align:center; font-size:11px; color:#555; margin-bottom:5px;}
 .controls{ display:flex; flex-wrap:wrap; gap:5px; align-items:center; justify-content:center; margin-bottom:5px;}
-select,button{ padding:5px 8px; font-size:13px; border-radius:8px; border:1px solid #1976d2; background:linear-gradient(to bottom,#42a5f5,#1e88e5); color:white; cursor:pointer;}
-#resetBtn{ background:linear-gradient(to bottom,#f44336,#d32f2f);}
-#showChartBtn{ background:linear-gradient(to bottom,#ff9800,#f57c00);}
+select,button{ padding:5px 8px; font-size:13px; border-radius:8px; border:1px solid #1976d2; background:linear-gradient(to bottom,#42a5f5,#1e88e5); color:white; cursor:pointer; box-shadow:2px 2px 5px rgba(0,0,0,0.2); transition:transform 0.1s;}
+select:hover,button:hover{ transform:translateY(-2px);}
+#showChartBtn{ background:linear-gradient(to bottom,#ff9800,#f57c00); border:1px solid #e65100; }
+#showChartBtn:hover{ transform:translateY(-2px); background:linear-gradient(to bottom,#f57c00,#e65100); }
+#resetBtn{ background:linear-gradient(to bottom,#f44336,#d32f2f); border:1px solid #c62828; }
+#resetBtn:hover{ transform:translateY(-2px); background:linear-gradient(to bottom,#d32f2f,#c62828); }
 .checkbox-container{ display:flex; flex-wrap:wrap; justify-content:center; gap:3px; font-size:12px; margin-bottom:5px;}
 .summary{ text-align:center; background:linear-gradient(to right,#a8ff78,#78ffd6); padding:5px 10px; border-radius:12px; font-weight:bold; font-size:12px; box-shadow:1px 2px 6px rgba(0,0,0,0.2); margin-bottom:10px;}
 table{ width:100%; border-collapse:collapse; background:white; font-size:11px; border-radius:12px; overflow:hidden; box-shadow:0 5px 15px rgba(0,0,0,0.2);}
-th,td{ border:1px solid #ddd; padding:3px; text-align:center; vertical-align:middle;}
-th{ background:linear-gradient(to bottom,#1976d2,#42a5f5); color:white;}
+th,td{ border:1px solid #ddd; padding:3px; text-align:center; vertical-align:middle; transition:all 0.2s;}
+th{ background:linear-gradient(to bottom,#1976d2,#42a5f5); color:white; text-shadow:1px 1px 2px #333;}
+tr:hover{ background:#e3f2fd; transform:scale(1.02); box-shadow:0 4px 10px rgba(0,0,0,0.2);}
+input[type="number"], input[type="text"], select{ width:100%; padding:2px; font-size:11px; border-radius:6px; border:1px solid #1976d2; box-shadow:inset 1px 1px 3px rgba(0,0,0,0.1);}
 .holiday-personal{ background:#ffd3d3; border-left:4px solid #ff1744; font-weight:bold;}
-.holiday-ot{ background:#fff3b2; border-left:4px solid #ffc400; font-weight:bold;}
-input[type="number"], input[type="text"], select{ width:100%; padding:2px; font-size:11px; border-radius:6px; border:1px solid #1976d2;}
-.modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);}
-.modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border-radius: 12px; width: 90%; max-width: 800px;}
-.close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor:pointer;}
-.chart-container { position: relative; height: 400px; width: 100%;}
+.holiday-ot{ background:#fff3b2 !important; border-left:4px solid #ffc400; font-weight:bold;}
+@media(max-width:480px){h2{font-size:16px;} .controls{flex-direction:column;align-items:stretch;} select,button{font-size:11px;width:100%;} .checkbox-container{font-size:10px;} .summary{font-size:11px;} th,td{font-size:10px;padding:1px;} input[type="number"],input[type="text"],select{font-size:10px;}}
+.td-shift .shift-label{ font-weight:bold; margin-bottom:2px; display:block; color:#0d47a1; text-shadow:1px 1px 1px #aaa; }
+.td-shift select{ border-radius:6px; border:1px solid #1976d2; appearance:none; -webkit-appearance:none; -moz-appearance:none;
+background:white url('data:image/svg+xml;utf8,<svg fill="gray" height="12" viewBox="0 0 24 24" width="12" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat right 5px center; background-size:12px 12px;}
+.modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
+.modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border-radius: 12px; width: 90%; max-width: 800px; box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19); animation-name: animatetop; animation-duration: 0.4s }
+@keyframes animatetop { from {top: -300px; opacity: 0} to {top: 0; opacity: 1} }
+.close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
+.close-btn:hover, .close-btn:focus { color: #000; text-decoration: none; cursor: pointer; }
+.chart-container { position: relative; height: 400px; width: 100%; }
+.chart-controls { text-align: center; margin-bottom: 10px; font-size: 14px; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -35,11 +49,13 @@ input[type="number"], input[type="text"], select{ width:100%; padding:2px; font-
 <b>วิธีใช้งาน:</b><br>
 1. เลือกวันหยุดส่วนตัวที่ต้องการ<br>
 2. เลือกกะ (N1, D1, HD1, HN1)<br>
-3. กรอกจำนวนชั่วโมง OT<br>
+3. กรอกจำนวนชั่วโมง OT (1–3 ชั่วโมง วันธรรมดา จะขึ้นหมายเหตุ "ตัดกลับ")<br>
 4. ระบบคำนวณ OT1 / OT1.5 / OT3 อัตโนมัติ<br>
-5. กด "ล้างข้อมูลเดือนนี้" เพื่อรีเซ็ต<br>
+5. กด "ล้างข้อมูลเดือนนี้" เพื่อรีเซ็ตเฉพาะรอบเดือนที่เลือก<br>
 6. ข้อมูลทั้งหมดบันทึกอัตโนมัติใน LocalStorage
 </div>
+
+<div class="credit">ออกแบบเว็บนี้โดย: สิทธินน</div>
 
 <div class="controls">
 เดือน: <select id="month"></select>
@@ -76,6 +92,9 @@ input[type="number"], input[type="text"], select{ width:100%; padding:2px; font-
   <div class="modal-content">
     <span class="close-btn">&times;</span>
     <h3 style="text-align:center; color:#0d47a1;">สรุปชั่วโมง OT รายปี</h3>
+    <div class="chart-controls">
+        เลือกปี: <select id="yearChartSelect"></select>
+    </div>
     <div class="chart-container">
         <canvas id="otChart"></canvas>
     </div>
@@ -85,9 +104,10 @@ input[type="number"], input[type="text"], select{ width:100%; padding:2px; font-
 <script>
 document.addEventListener("DOMContentLoaded",function(){
 const dayNames=["อาทิตย์","จันทร์","อังคาร","พุธ","พฤหัส","ศุกร์","เสาร์"];
-const monthNamesTH = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const monthNamesTH = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 const monthSelect=document.getElementById("month");
 const yearSelect=document.getElementById("year");
+const yearChartSelect=document.getElementById("yearChartSelect"); 
 const tbody=document.getElementById("otTable").querySelector("tbody");
 const summary=document.getElementById("summary");
 const checkboxes=document.querySelectorAll(".checkbox-container input[type=checkbox]");
@@ -95,141 +115,223 @@ const modal = document.getElementById("chartModal");
 const btn = document.getElementById("showChartBtn");
 const span = document.getElementsByClassName("close-btn")[0];
 let userHolidays=[];
-let otChartInstance = null;
+let otChartInstance = null; 
 
-// โหลด dropdown เดือน/ปี
+// ----------------------------------------------------
+// 1. โหลด Dropdown เดือน/ปี
+// ----------------------------------------------------
 for(let m=0;m<12;m++){
-  const opt=document.createElement("option"); opt.value=m; opt.text=monthNamesTH[m]; monthSelect.appendChild(opt);}
+  const opt=document.createElement("option"); opt.value=m;
+  opt.text=monthNamesTH[m];
+  monthSelect.appendChild(opt);
+}
+
+// ปี +-2
 const currentYear=new Date().getFullYear();
 for(let y=currentYear-2;y<=currentYear+2;y++){
-  const opt=document.createElement("option"); opt.value=y; opt.text=y; yearSelect.appendChild(opt);}
-  
-// โหลดเดือน/ปีล่าสุดจาก localStorage หรือใช้ปัจจุบัน
-const today=new Date();
-let savedMonth = localStorage.getItem("ot_lastMonth");
-let savedYear = localStorage.getItem("ot_lastYear");
-let initialMonth = savedMonth!==null?parseInt(savedMonth):today.getMonth();
-let initialYear = savedYear!==null?parseInt(savedYear):today.getFullYear();
-monthSelect.value=initialMonth; yearSelect.value=initialYear;
+  const opt=document.createElement("option"); opt.value=y; opt.text=y; yearSelect.appendChild(opt);
+  const optChart=document.createElement("option"); optChart.value=y; optChart.text=y; yearChartSelect.appendChild(optChart);
+}
 
-// บันทึกเดือน/ปีล่าสุดเมื่อเปลี่ยน
-monthSelect.addEventListener("change",()=>{ localStorage.setItem("ot_lastMonth", monthSelect.value); createTable(); });
-yearSelect.addEventListener("change",()=>{ localStorage.setItem("ot_lastYear", yearSelect.value); createTable(); });
+// ----------------------------------------------------
+// 2. กำหนดค่าเดือน/ปีเริ่มต้นจาก LocalStorage
+// ----------------------------------------------------
+const lastMonth = localStorage.getItem("lastMonth");
+const lastYear = localStorage.getItem("lastYear");
+let initialMonth = lastMonth!==null ? parseInt(lastMonth) : new Date().getMonth();
+let initialYear = lastYear!==null ? parseInt(lastYear) : new Date().getFullYear();
+monthSelect.value = initialMonth;
+yearSelect.value = initialYear;
+yearChartSelect.value = initialYear;
 
-// ฟังก์ชัน key localStorage
-function getKeyData(year,month){ if(!year) year=yearSelect.value; if(!month) month=monthSelect.value; return `otData_${year}-${parseInt(month)+1}`; }
-function getKeyHoliday(){ return `holidays_${yearSelect.value}-${parseInt(monthSelect.value)+1}`; }
-
-// โหลดวันหยุดส่วนตัว
+// ----------------------------------------------------
+// 3. จัดการวันหยุดส่วนตัว
+// ----------------------------------------------------
 function loadHolidays(){
-    const saved=JSON.parse(localStorage.getItem(getKeyHoliday())||"[]");
+    const saved=JSON.parse(localStorage.getItem(`holidays_${yearSelect.value}-${parseInt(monthSelect.value)+1}`)||"[]");
     checkboxes.forEach(cb=>cb.checked=saved.includes(parseInt(cb.value)));
     userHolidays=Array.from(checkboxes).filter(cb=>cb.checked).map(cb=>parseInt(cb.value));
 }
 checkboxes.forEach(cb=>cb.addEventListener("change",()=>{
     userHolidays=Array.from(checkboxes).filter(c=>c.checked).map(c=>parseInt(c.value));
-    localStorage.setItem(getKeyHoliday(),JSON.stringify(userHolidays));
+    localStorage.setItem(`holidays_${yearSelect.value}-${parseInt(monthSelect.value)+1}`,JSON.stringify(userHolidays));
     createTable();
 }));
+
 document.getElementById("resetBtn").addEventListener("click",()=>{
-    if(confirm("คุณต้องการล้างข้อมูล OT และวันหยุดส่วนตัวสำหรับรอบเดือนนี้ ใช่หรือไม่?")){
-        localStorage.removeItem(getKeyData()); 
-        localStorage.removeItem(getKeyHoliday());
+    if(confirm("คุณต้องการล้างข้อมูล OT และวันหยุดส่วนตัวสำหรับรอบเดือนนี้เท่านั้น ใช่หรือไม่?")){
+        localStorage.removeItem(`otData_${yearSelect.value}-${parseInt(monthSelect.value)+1}`); 
+        localStorage.removeItem(`holidays_${yearSelect.value}-${parseInt(monthSelect.value)+1}`);
         createTable();
     }
 });
 
-// สร้างตาราง
+// ----------------------------------------------------
+// 4. สร้างตารางหลัก
+// ----------------------------------------------------
 function createTable(){
     tbody.innerHTML="";
     loadHolidays();
-    const currentMonth=parseInt(monthSelect.value);
-    const currentYear=parseInt(yearSelect.value);
-    let startDate = new Date(currentYear,currentMonth,16);
-    let endMonth = currentMonth+1; let endYear=currentYear;
-    if(endMonth>11){ endMonth=0; endYear+=1; }
-    let endDate=new Date(endYear,endMonth,15);
-    const savedData=JSON.parse(localStorage.getItem(getKeyData())||"[]");
+    
+    const currentMonth = parseInt(monthSelect.value);
+    const currentYear = parseInt(yearSelect.value);
+    
+    let startDate = new Date(currentYear, currentMonth, 16); 
+    let endMonth = currentMonth + 1;
+    let endYear = currentYear;
+    if (endMonth > 11) { endMonth = 0; endYear += 1; }
+    let endDate = new Date(endYear, endMonth, 15);
+
+    const savedData=JSON.parse(localStorage.getItem(`otData_${currentYear}-${currentMonth+1}`)||"[]"); 
     let current=new Date(startDate);
-    while(current<=endDate){
+
+    while(current <= endDate){
         const tr=document.createElement("tr");
         const day=current.getDay();
-        const thYear=current.getFullYear()+543;
-        const formattedDate=`${current.getDate().toString().padStart(2,'0')}/${(current.getMonth()+1).toString().padStart(2,'0')}/${thYear}`;
+        
+        const thYear = current.getFullYear() + 543;
+        const formattedDate = `${current.getDate().toString().padStart(2,'0')}/${(current.getMonth() + 1).toString().padStart(2,'0')}/${thYear}`;
+        
         const tdDate=document.createElement("td"); tdDate.textContent=formattedDate; tr.appendChild(tdDate);
         const tdDay=document.createElement("td"); tdDay.textContent=dayNames[day]; tr.appendChild(tdDay);
-        const tdShift=document.createElement("td"); 
+
+        const tdShift=document.createElement("td"); tdShift.classList.add("td-shift");
+        const shiftLabel=document.createElement("div"); shiftLabel.classList.add("shift-label"); shiftLabel.textContent=""; tdShift.appendChild(shiftLabel);
         const selectShift=document.createElement("select");
         ["","N1","D1","HD1","HN1"].forEach(v=>{ const opt=document.createElement("option"); opt.value=v; opt.text=v; selectShift.appendChild(opt); });
         tdShift.appendChild(selectShift); tr.appendChild(tdShift);
-        const tdHours=document.createElement("td"); const inputHours=document.createElement("input"); inputHours.type="number"; inputHours.min=0; inputHours.max=12; inputHours.step=0.5; tdHours.appendChild(inputHours); tr.appendChild(tdHours);
+
+        const tdHours=document.createElement("td");
+        const inputHours=document.createElement("input"); inputHours.type="number"; inputHours.min=0; inputHours.max=12; inputHours.step=0.5; inputHours.style.display="none"; 
+        tdHours.appendChild(inputHours); tr.appendChild(tdHours);
+
         const tdOT1=document.createElement("td"), tdOT15=document.createElement("td"), tdOT3=document.createElement("td"); tr.appendChild(tdOT1); tr.appendChild(tdOT15); tr.appendChild(tdOT3);
         const tdTime=document.createElement("td"); tr.appendChild(tdTime);
         const tdNote=document.createElement("td"); const inputNote=document.createElement("input"); inputNote.type="text"; tdNote.appendChild(inputNote); tr.appendChild(tdNote);
+
         if(userHolidays.includes(day)) tr.classList.add("holiday-personal");
         tbody.appendChild(tr);
 
-        // โหลดข้อมูลที่บันทึกไว้
         const idx=savedData.findIndex(d=>d.date===formattedDate);
         if(idx>=0){
             const d=savedData[idx];
-            selectShift.value=d.shift; if(d.shift) inputHours.value=d.hours;
+            selectShift.value=d.shift; shiftLabel.textContent=d.shift;
+            if(d.shift) inputHours.style.display="inline-block";
+            inputHours.value=d.hours;
             tdOT1.textContent=d.ot1||""; tdOT15.textContent=d.ot15||""; tdOT3.textContent=d.ot3||"";
             tdTime.textContent=d.time||""; inputNote.value=d.note||"";
             if(d.shift=="HD1"||d.shift=="HN1"){ tr.classList.remove("holiday-personal"); tr.classList.add("holiday-ot"); }
         }
 
-        // Event listener
-        selectShift.addEventListener("change",()=>{ updateRow(tr,selectShift,inputHours,current); });
-        inputHours.addEventListener("input",()=>{ updateRow(tr,selectShift,inputHours,current); });
+        selectShift.addEventListener("change",()=>{ handleRowChange(tr,selectShift,inputHours,current); });
+        inputHours.addEventListener("input",()=>{ handleRowChange(tr,selectShift,inputHours,current); });
+
         current.setDate(current.getDate()+1);
     }
     updateSummary();
 }
 
-function updateRow(tr,selectShift,inputHours,current){
+function handleRowChange(tr,selectShift,inputHours,current){
     const tds=tr.querySelectorAll("td");
     const shift=selectShift.value;
     const hours=parseFloat(inputHours.value||0);
     const tdOT1=tds[4], tdOT15=tds[5], tdOT3=tds[6], tdTime=tds[7], tdNote=tds[8].querySelector("input");
     let ot1=0, ot15=0, ot3=0, startTime="";
-    tdOT1.textContent=""; tdOT15.textContent=""; tdOT3.textContent=""; tdTime.textContent="";
-    if(hours>0){
-        if(shift=="N1"||shift=="D1"){ ot15=hours; startTime=(shift=="N1")?"03:45":"15:45"; if(hours<=3) tdNote.value="ตัดกลับ"; }
-        else if(shift=="HD1"||shift=="HN1"){ startTime=(shift=="HD1")?"07:45":"19:45"; if(hours<=8) ot1=hours; else{ ot1=8; ot3=hours-8;} tdNote.value="OT วันหยุด"; }
-        if(startTime) tdTime.textContent=`${startTime} – ${addHours(startTime,hours)}`;
-    }
-    tdOT1.textContent=ot1?ot1.toFixed(2):"";
-    tdOT15.textContent=ot15?ot15.toFixed(2):"";
-    tdOT3.textContent=ot3?ot3.toFixed(2):"";
-    saveData(); updateSummary();
+
+    tdOT1.textContent=""; tdOT15.textContent=""; tdOT3.textContent=""; tdTime.textContent=""; 
+    if(!tdNote.value || (shift !== "HD1" && shift !== "HN1")){ tdNote.value=""; }
+
+    if(hours > 0){
+        if(shift=="N1"||shift=="D1"){ ot15=hours; startTime=(shift=="N1")?"03:45":"15:45"; if(hours>0 && hours<=3){ tdNote.value="ตัดกลับ"; } }
+        else if(shift=="HD1"||shift=="HN1"){ startTime=(shift=="HD1")?"07:45":"19:45"; ot1 = hours<=8 ? hours : 8; ot3 = hours>8 ? hours-8 : 0; tdNote.value="OT วันหยุด"; }
+        if(startTime){ tdTime.textContent=`${startTime} – ${addHours(startTime,hours)}`; }
+    } 
+    tdOT1.textContent=ot1; tdOT15.textContent=ot15; tdOT3.textContent=ot3;
+    saveData();
+    updateSummary();
 }
 
-function addHours(start,h){ let [hh,mm]=start.split(":").map(Number); let totalMinutes=(hh*60)+mm+Math.round(h*60); let newH=Math.floor(totalMinutes/60)%24; let newM=totalMinutes%60; return `${newH.toString().padStart(2,'0')}:${newM.toString().padStart(2,'0')}`; }
-function updateSummary(){ let ot1=0,ot15=0,ot3=0; tbody.querySelectorAll("tr").forEach(tr=>{ ot1+=parseFloat(tr.cells[4].textContent||0); ot15+=parseFloat(tr.cells[5].textContent||0); ot3+=parseFloat(tr.cells[6].textContent||0); }); summary.textContent=`รวม OT1:${ot1.toFixed(2)} | OT1.5:${ot15.toFixed(2)} | OT3:${ot3.toFixed(2)}`; }
-function saveData(){ const data=[]; tbody.querySelectorAll("tr").forEach(tr=>{ const date=tr.cells[0].textContent; const shift=tr.cells[2].querySelector("select").value; const hours=parseFloat(tr.cells[3].querySelector("input").value||0); const ot1=tr.cells[4].textContent; const ot15=tr.cells[5].textContent; const ot3=tr.cells[6].textContent; const time=tr.cells[7].textContent; const note=tr.cells[8].querySelector("input").value; data.push({date,shift,hours,ot1,ot15,ot3,time,note}); }); localStorage.setItem(getKeyData(),JSON.stringify(data)); }
+function addHours(start,hrs){
+    let [h,m]=start.split(":").map(Number); h+=Math.floor(hrs); m+=Math.round((hrs%1)*60);
+    if(m>=60){ h+=Math.floor(m/60); m=m%60; }
+    h=h%24; return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+}
 
-// Modal และ Chart
-btn.onclick=function(){
-    const labels=[], ot1Data=[], ot15Data=[], ot3Data=[];
+// ----------------------------------------------------
+// 5. บันทึกข้อมูลใน LocalStorage
+// ----------------------------------------------------
+function saveData(){
+    const currentMonth = parseInt(monthSelect.value);
+    const currentYear = parseInt(yearSelect.value);
+    const rows=tbody.querySelectorAll("tr"); 
+    const data=[];
+    rows.forEach(tr=>{
+        const tds=tr.querySelectorAll("td");
+        data.push({
+            date: tds[0].textContent,
+            shift: tds[2].querySelector("select").value,
+            hours: parseFloat(tds[3].querySelector("input").value||0),
+            ot1: parseFloat(tds[4].textContent||0),
+            ot15: parseFloat(tds[5].textContent||0),
+            ot3: parseFloat(tds[6].textContent||0),
+            time: tds[7].textContent,
+            note: tds[8].querySelector("input").value
+        });
+    });
+    localStorage.setItem(`otData_${currentYear}-${currentMonth+1}`,JSON.stringify(data));
+    localStorage.setItem("lastMonth", currentMonth);
+    localStorage.setItem("lastYear", currentYear);
+}
+
+// ----------------------------------------------------
+// 6. สรุป OT รวม
+// ----------------------------------------------------
+function updateSummary(){
+    let sumOT1=0, sumOT15=0, sumOT3=0;
+    tbody.querySelectorAll("tr").forEach(tr=>{
+        const tds=tr.querySelectorAll("td");
+        sumOT1+=parseFloat(tds[4].textContent||0);
+        sumOT15+=parseFloat(tds[5].textContent||0);
+        sumOT3+=parseFloat(tds[6].textContent||0);
+    });
+    summary.textContent=`รวม OT1:${sumOT1} | OT1.5:${sumOT15} | OT3:${sumOT3}`;
+}
+
+// ----------------------------------------------------
+// 7. Event เปลี่ยนเดือน/ปี
+// ----------------------------------------------------
+monthSelect.addEventListener("change",createTable);
+yearSelect.addEventListener("change",createTable);
+
+// ----------------------------------------------------
+// 8. Modal กราฟ OT รายปี
+// ----------------------------------------------------
+btn.onclick = function() { modal.style.display = "block"; drawChart(); }
+span.onclick = function() { modal.style.display = "none"; }
+window.onclick = function(event){ if(event.target==modal){ modal.style.display="none"; } }
+
+yearChartSelect.addEventListener("change", drawChart);
+
+function drawChart(){
+    const year=yearChartSelect.value;
+    const monthlyOT=new Array(12).fill(0);
     for(let m=0;m<12;m++){
-        const key=getKeyData(yearSelect.value,m); const saved=JSON.parse(localStorage.getItem(key)||"[]");
-        let ot1=0,ot15=0,ot3=0; saved.forEach(d=>{ ot1+=parseFloat(d.ot1||0); ot15+=parseFloat(d.ot15||0); ot3+=parseFloat(d.ot3||0); });
-        labels.push(monthNamesTH[m]); ot1Data.push(ot1); ot15Data.push(ot15); ot3Data.push(ot3);
+        const data=JSON.parse(localStorage.getItem(`otData_${year}-${m+1}`)||"[]");
+        let sum=0; data.forEach(d=>{ sum+= (d.ot1||0)+(d.ot15||0)+(d.ot3||0); }); 
+        monthlyOT[m]=sum;
     }
-    const ctx=document.getElementById('otChart').getContext('2d');
+    const ctx=document.getElementById("otChart").getContext("2d");
     if(otChartInstance) otChartInstance.destroy();
-    otChartInstance=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[
-        {label:'OT1',data:ot1Data,backgroundColor:'rgba(255,99,132,0.8)'},
-        {label:'OT1.5',data:ot15Data,backgroundColor:'rgba(54,162,235,0.8)'},
-        {label:'OT3',data:ot3Data,backgroundColor:'rgba(75,192,192,0.8)'}
-    ]}, options:{responsive:true,plugins:{title:{display:true,text:`ชั่วโมง OT รายปี ${yearSelect.value}`}},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}}}});
-    modal.style.display="block";
+    otChartInstance=new Chart(ctx,{
+        type:'bar',
+        data:{ labels:monthNamesTH, datasets:[{ label:'ชั่วโมง OT รวม', data:monthlyOT, backgroundColor:'#42a5f5'}] },
+        options:{ responsive:true, plugins:{ legend:{display:true}, tooltip:{enabled:true} } }
+    });
 }
-span.onclick=function(){ modal.style.display="none"; }
-window.onclick=function(event){ if(event.target==modal) modal.style.display="none"; }
 
+// เรียกครั้งแรก
 createTable();
+
 });
 </script>
 </body>
