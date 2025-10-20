@@ -4,21 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>โน็ตบันทึกชั่วโมงOT รอบวันที่16-15</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-body{ font-family: Arial; margin:5px; background:#f0f4ff;}
+body{ font-family: Arial; margin:5px; background:linear-gradient(135deg,#f0f4ff,#d9e8ff);}
 h2{text-align:center; color:#0d47a1;}
-.controls, .checkbox-container{ display:flex; justify-content:center; gap:5px; margin:5px;}
-table{width:100%; border-collapse:collapse; font-size:12px;}
-th, td{border:1px solid #ddd; text-align:center; padding:3px;}
-th{background:#1976d2;color:white;}
-.holiday-personal{background:#ffd3d3;}
-.holiday-ot{background:#fff3b2;}
+.controls, .checkbox-container{ display:flex; flex-wrap:wrap; gap:5px; justify-content:center; margin-bottom:5px;}
+table{width:100%; border-collapse:collapse; font-size:11px; background:white; border-radius:12px; overflow:hidden; box-shadow:0 5px 15px rgba(0,0,0,0.2);}
+th, td{border:1px solid #ddd; text-align:center; padding:3px; vertical-align:middle;}
+th{background:linear-gradient(to bottom,#1976d2,#42a5f5); color:white;}
+.holiday-personal{background:#ffd3d3; font-weight:bold;}
+.holiday-ot{background:#fff3b2; font-weight:bold;}
 input[type=number]{width:50px;}
-.summary{text-align:center; margin:5px;}
-.modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6);}
-.modal-content{background:white; margin:5% auto; padding:20px; width:90%; max-width:800px; border-radius:8px; position:relative;}
-.close-btn{position:absolute; top:10px; right:20px; font-size:24px; cursor:pointer;}
+input[type=text]{width:100%;}
+.summary{text-align:center; font-weight:bold; margin-bottom:10px; background:linear-gradient(to right,#a8ff78,#78ffd6); padding:5px 10px; border-radius:12px; box-shadow:1px 2px 6px rgba(0,0,0,0.2);}
+.modal{display:none; position:fixed; z-index:100; left:0; top:0; width:100%; height:100%; overflow:auto; background-color: rgba(0,0,0,0.6);}
+.modal-content{background-color: #fefefe; margin:5% auto; padding:20px; border-radius: 12px; width:90%; max-width:800px; box-shadow:0 4px 8px rgba(0,0,0,0.2);}
+.close-btn{color:#aaa; float:right; font-size:28px; font-weight:bold; cursor:pointer;}
+.close-btn:hover{color:#000;}
+.chart-container{position:relative; height:400px; width:100%;}
 </style>
 </head>
 <body>
@@ -43,180 +46,175 @@ input[type=number]{width:50px;}
 <label><input type="checkbox" value="0">อาทิตย์</label>
 </div>
 
-<div class="summary" id="summary"></div>
+<div class="summary" id="summary">รวม OT1:0 | OT1.5:0 | OT3:0</div>
 
 <table id="otTable">
 <thead>
-<tr><th>วันที่</th><th>วัน</th><th>กะ</th><th>ชั่วโมง OT</th><th>OT1</th><th>OT1.5</th><th>OT3</th><th>หมายเหตุ</th></tr>
+<tr><th>วันที่</th><th>วัน</th><th>กะ</th><th>ชั่วโมง OT</th><th>OT1</th><th>OT1.5</th><th>OT3</th><th>เวลาเข้า–ออก</th><th>หมายเหตุ</th></tr>
 </thead>
 <tbody></tbody>
 </table>
 
 <div id="chartModal" class="modal">
-<div class="modal-content">
-<span class="close-btn">&times;</span>
-<h3>สรุป OT รายปี</h3>
-<canvas id="otChart"></canvas>
-</div>
+  <div class="modal-content">
+    <span class="close-btn">&times;</span>
+    <h3 style="text-align:center; color:#0d47a1;">สรุปชั่วโมง OT รายปี</h3>
+    <div class="chart-container">
+        <canvas id="otChart"></canvas>
+    </div>
+  </div>
 </div>
 
 <script>
+document.addEventListener("DOMContentLoaded",function(){
 const dayNames=["อาทิตย์","จันทร์","อังคาร","พุธ","พฤหัส","ศุกร์","เสาร์"];
-const monthNames=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const monthNamesTH = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const monthSelect=document.getElementById("month");
 const yearSelect=document.getElementById("year");
-const tbody=document.querySelector("#otTable tbody");
-const summaryDiv=document.getElementById("summary");
+const tbody=document.getElementById("otTable").querySelector("tbody");
+const summary=document.getElementById("summary");
 const checkboxes=document.querySelectorAll(".checkbox-container input[type=checkbox]");
 const resetBtn=document.getElementById("resetBtn");
 const showChartBtn=document.getElementById("showChartBtn");
-const modal=document.getElementById("chartModal");
-const closeBtn=modal.querySelector(".close-btn");
+const modal = document.getElementById("chartModal");
+const closeBtn = modal.querySelector(".close-btn");
 const otChartCanvas=document.getElementById("otChart");
+let userHolidays=[];
 let otChartInstance=null;
 
-// เติมเดือน/ปี
+// สร้าง dropdown เดือน/ปี
 const today=new Date();
-const lastMonth=localStorage.getItem("otLastMonth");
-const lastYear=localStorage.getItem("otLastYear");
-for(let m=0;m<12;m++){
-  let opt=document.createElement("option"); opt.value=m; opt.text=monthNames[m]; monthSelect.appendChild(opt);}
-for(let y=today.getFullYear()-2;y<=today.getFullYear()+2;y++){
-  let opt=document.createElement("option"); opt.value=y; opt.text=y; yearSelect.appendChild(opt);}
-monthSelect.value=lastMonth!==null?lastMonth:today.getMonth();
-yearSelect.value=lastYear!==null?lastYear:today.getFullYear();
+for(let m=0;m<12;m++){ let opt=document.createElement("option"); opt.value=m; opt.text=monthNamesTH[m]; monthSelect.appendChild(opt);}
+for(let y=today.getFullYear()-2;y<=today.getFullYear()+2;y++){ let opt=document.createElement("option"); opt.value=y; opt.text=y; yearSelect.appendChild(opt);}
+monthSelect.value=today.getMonth(); yearSelect.value=today.getFullYear();
 
-// ฟังก์ชัน LocalStorage
-function getDataKey(){ return `otData_${yearSelect.value}_${monthSelect.value}`;}
-function getHolidayKey(){ return `otHoliday_${yearSelect.value}_${monthSelect.value}`;}
+function getKeyData(year,month){ return `otData_${year}-${month+1}`;}
+function getKeyHoliday(){ return `holidays_${yearSelect.value}-${parseInt(monthSelect.value)+1}`;}
 
-// โหลด/บันทึกวันหยุด
 function loadHolidays(){
-  const saved=JSON.parse(localStorage.getItem(getHolidayKey())||"[]");
-  checkboxes.forEach(cb=>cb.checked=saved.includes(parseInt(cb.value)));
+    const saved=JSON.parse(localStorage.getItem(getKeyHoliday())||"[]");
+    checkboxes.forEach(cb=>cb.checked=saved.includes(parseInt(cb.value)));
+    userHolidays=Array.from(checkboxes).filter(cb=>cb.checked).map(cb=>parseInt(cb.value));
 }
-function saveHolidays(){
-  const val=Array.from(checkboxes).filter(cb=>cb.checked).map(cb=>parseInt(cb.value));
-  localStorage.setItem(getHolidayKey(),JSON.stringify(val));
-}
+function saveHolidays(){ localStorage.setItem(getKeyHoliday(),JSON.stringify(userHolidays)); }
 
-// สร้างตาราง OT
 function createTable(){
-  tbody.innerHTML=""; loadHolidays();
-  const holidays=Array.from(checkboxes).filter(cb=>cb.checked).map(cb=>parseInt(cb.value));
-  const y=parseInt(yearSelect.value), m=parseInt(monthSelect.value);
-  let start=new Date(y,m,16);
-  let endMonth=m+1,endYear=y;if(endMonth>11){endMonth=0;endYear++;}
-  let end=new Date(endYear,endMonth,15);
-  const saved=JSON.parse(localStorage.getItem(getDataKey())||"[]");
-  let totalOT1=0,totalOT15=0,totalOT3=0;
-  for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
-    let tr=document.createElement("tr");
-    const day=d.getDay();
-    const dateStr=`${d.getDate().toString().padStart(2,"0")}/${(d.getMonth()+1).toString().padStart(2,"0")}/${d.getFullYear()+543}`;
-    tr.innerHTML=`<td>${dateStr}</td><td>${dayNames[day]}</td>
-    <td><select><option value=""></option><option value="N1">N1</option><option value="D1">D1</option><option value="HD1">HD1</option><option value="HN1">HN1</option></select></td>
-    <td><input type="number" min="0" max="12" step="0.5"></td>
-    <td></td><td></td><td></td>
-    <td><input type="text"></td>`;
-    if(holidays.includes(day)) tr.classList.add("holiday-personal");
-    tbody.appendChild(tr);
+    tbody.innerHTML=""; loadHolidays();
+    const currentMonth=parseInt(monthSelect.value);
+    const currentYear=parseInt(yearSelect.value);
+    let startDate=new Date(currentYear,currentMonth,16);
+    let endMonth=currentMonth+1,endYear=currentYear;if(endMonth>11){endMonth=0; endYear++;}
+    let endDate=new Date(endYear,endMonth,15);
+    const savedData=JSON.parse(localStorage.getItem(getKeyData(currentYear,currentMonth))||"[]");
+    let current=new Date(startDate);
+    while(current<=endDate){
+        const tr=document.createElement("tr");
+        const day=current.getDay();
+        const thYear=current.getFullYear()+543;
+        const formattedDate=`${current.getDate().toString().padStart(2,'0')}/${(current.getMonth()+1).toString().padStart(2,'0')}/${thYear}`;
+        tr.innerHTML=`<td>${formattedDate}</td><td>${dayNames[day]}</td>
+        <td class="td-shift"><select><option value=""></option><option value="N1">N1</option><option value="D1">D1</option><option value="HD1">HD1</option><option value="HN1">HN1</option></select></td>
+        <td><input type="number" min="0" max="12" step="0.5" style="display:none"></td>
+        <td></td><td></td><td></td>
+        <td></td><td><input type="text"></td>`;
+        if(userHolidays.includes(day)) tr.classList.add("holiday-personal");
+        tbody.appendChild(tr);
 
-    const shiftSel=tr.cells[2].querySelector("select");
-    const hoursInp=tr.cells[3].querySelector("input");
-    const noteInp=tr.cells[7].querySelector("input");
+        const shiftSel=tr.cells[2].querySelector("select");
+        const hoursInp=tr.cells[3].querySelector("input");
+        const noteInp=tr.cells[8].querySelector("input");
 
-    // โหลดข้อมูลที่บันทึกแล้ว
-    const existing=saved.find(s=>s.date===dateStr);
-    if(existing){
-      shiftSel.value=existing.shift; hoursInp.value=existing.hours;
-      tr.cells[4].textContent=existing.ot1||""; tr.cells[5].textContent=existing.ot15||""; tr.cells[6].textContent=existing.ot3||""; noteInp.value=existing.note||"";
-      if(existing.shift==="HD1"||existing.shift==="HN1"){ tr.classList.remove("holiday-personal"); tr.classList.add("holiday-ot"); }
+        const existing=savedData.find(d=>d.date===formattedDate);
+        if(existing){
+            shiftSel.value=existing.shift; if(shiftSel.value) hoursInp.style.display="inline-block";
+            hoursInp.value=existing.hours||""; tr.cells[4].textContent=existing.ot1||""; tr.cells[5].textContent=existing.ot15||""; tr.cells[6].textContent=existing.ot3||""; tr.cells[7].textContent=existing.time||""; noteInp.value=existing.note||"";
+            if(existing.shift==="HD1"||existing.shift==="HN1"){ tr.classList.remove("holiday-personal"); tr.classList.add("holiday-ot"); }
+        }
+
+        function updateRow(){
+            const shift=shiftSel.value; const hours=parseFloat(hoursInp.value||0);
+            let ot1=0, ot15=0, ot3=0, startTime="";
+            if(shift){ hoursInp.style.display="inline-block"; } else { hoursInp.style.display="none"; hoursInp.value=""; noteInp.value=""; }
+            if(shift==="N1"){ ot15=hours; startTime="03:45"; if(hours<=3) noteInp.value="ตัดกลับ"; }
+            else if(shift==="D1"){ ot15=hours; startTime="15:45"; if(hours<=3) noteInp.value="ตัดกลับ"; }
+            else if(shift==="HD1"){ startTime="07:45"; ot1=hours>8?8:hours; ot3=hours>8?hours-8:0; noteInp.value="OT วันหยุด"; tr.classList.add("holiday-ot"); tr.classList.remove("holiday-personal"); }
+            else if(shift==="HN1"){ startTime="19:45"; ot1=hours>8?8:hours; ot3=hours>8?hours-8:0; noteInp.value="OT วันหยุด"; tr.classList.add("holiday-ot"); tr.classList.remove("holiday-personal"); }
+            if(startTime) tr.cells[7].textContent=`${startTime} – ${addHours(startTime,hours)}`;
+            tr.cells[4].textContent=ot1?ot1.toFixed(2):""; tr.cells[5].textContent=ot15?ot15.toFixed(2):""; tr.cells[6].textContent=ot3?ot3.toFixed(2):"";
+            saveTable(); updateSummary();
+        }
+        shiftSel.addEventListener("change",updateRow);
+        hoursInp.addEventListener("input",updateRow);
+        current.setDate(current.getDate()+1);
     }
-
-    // อัปเดต OT เมื่อเปลี่ยน
-    function updateRow(){
-      const shift=shiftSel.value; const hours=parseFloat(hoursInp.value)||0;
-      let ot1=0,ot15=0,ot3=0;
-      if(shift==="HD1"||shift==="HN1"){ ot3=hours; tr.classList.remove("holiday-personal"); tr.classList.add("holiday-ot"); noteInp.value="OT วันหยุด"; }
-      else{ if(hours>0){ ot1=hours; } if(holidays.includes(day)){ ot15=hours; tr.classList.add("holiday-personal"); }}
-      tr.cells[4].textContent=ot1; tr.cells[5].textContent=ot15; tr.cells[6].textContent=ot3;
-      saveTable();
-      updateSummary();
-    }
-    shiftSel.addEventListener("change",updateRow);
-    hoursInp.addEventListener("input",updateRow);
-  }
-  updateSummary();
+    updateSummary();
 }
 
-// บันทึกตารางลง localStorage
-function saveTable(){
-  const data=[];
-  tbody.querySelectorAll("tr").forEach(tr=>{
-    const date=tr.cells[0].textContent;
-    const shift=tr.cells[2].querySelector("select").value;
-    const hours=parseFloat(tr.cells[3].querySelector("input").value)||0;
-    const ot1=parseFloat(tr.cells[4].textContent)||0;
-    const ot15=parseFloat(tr.cells[5].textContent)||0;
-    const ot3=parseFloat(tr.cells[6].textContent)||0;
-    const note=tr.cells[7].querySelector("input").value;
-    if(shift||hours||ot1||ot15||ot3||note) data.push({date,shift,hours,ot1,ot15,ot3,note});
-  });
-  localStorage.setItem(getDataKey(),JSON.stringify(data));
-}
+function addHours(start,h){ let [hh,mm]=start.split(":").map(Number); let total=(hh*60)+mm+Math.round(h*60); let newH=Math.floor(total/60)%24; let newM=total%60; return `${newH.toString().padStart(2,'0')}:${newM.toString().padStart(2,'0')}`; }
 
-// สรุป OT
 function updateSummary(){
-  let ot1=0,ot15=0,ot3=0;
-  tbody.querySelectorAll("tr").forEach(tr=>{
-    ot1+=parseFloat(tr.cells[4].textContent)||0;
-    ot15+=parseFloat(tr.cells[5].textContent)||0;
-    ot3+=parseFloat(tr.cells[6].textContent)||0;
-  });
-  summaryDiv.textContent=`รวม OT1:${ot1} | OT1.5:${ot15} | OT3:${ot3}`;
+    let ot1=0, ot15=0, ot3=0;
+    tbody.querySelectorAll("tr").forEach(tr=>{ ot1+=parseFloat(tr.cells[4].textContent||0); ot15+=parseFloat(tr.cells[5].textContent||0); ot3+=parseFloat(tr.cells[6].textContent||0); });
+    summary.textContent=`รวม OT1:${ot1.toFixed(2)} | OT1.5:${ot15.toFixed(2)} | OT3:${ot3.toFixed(2)}`;
 }
 
-// Event change เดือน/ปี
-monthSelect.addEventListener("change",()=>{ localStorage.setItem("otLastMonth",monthSelect.value); createTable(); });
-yearSelect.addEventListener("change",()=>{ localStorage.setItem("otLastYear",yearSelect.value); createTable(); });
+function saveTable(){
+    const data=[];
+    tbody.querySelectorAll("tr").forEach(tr=>{
+        const date=tr.cells[0].textContent;
+        const shift=tr.cells[2].querySelector("select").value;
+        const hours=parseFloat(tr.cells[3].querySelector("input").value||0);
+        const ot1=parseFloat(tr.cells[4].textContent||0);
+        const ot15=parseFloat(tr.cells[5].textContent||0);
+        const ot3=parseFloat(tr.cells[6].textContent||0);
+        const time=tr.cells[7].textContent;
+        const note=tr.cells[8].querySelector("input").value;
+        data.push({date,shift,hours,ot1,ot15,ot3,time,note});
+    });
+    localStorage.setItem(getKeyData(yearSelect.value,monthSelect.value),JSON.stringify(data));
+}
+
+// Event เดือน/ปี
+monthSelect.addEventListener("change",()=>{ createTable(); });
+yearSelect.addEventListener("change",()=>{ createTable(); });
 
 // Event วันหยุด
-checkboxes.forEach(cb=>cb.addEventListener("change",()=>{ saveHolidays(); createTable(); }));
+checkboxes.forEach(cb=>cb.addEventListener("change",()=>{ userHolidays=Array.from(checkboxes).filter(c=>c.checked).map(c=>parseInt(c.value)); saveHolidays(); createTable(); }));
 
-// ล้างข้อมูลเดือนนี้
-resetBtn.addEventListener("click",()=>{
-  if(confirm("คุณต้องการล้างข้อมูลเดือนนี้ใช่หรือไม่?")){
-    localStorage.removeItem(getDataKey());
-    localStorage.removeItem(getHolidayKey());
-    createTable();
-  }
-});
+// ล้างข้อมูล
+resetBtn.addEventListener("click",()=>{ if(confirm("คุณต้องการล้างข้อมูลเดือนนี้?")){ localStorage.removeItem(getKeyData(yearSelect.value,monthSelect.value)); localStorage.removeItem(getKeyHoliday()); createTable(); }});
 
-// กราฟ OT รายปี
+// กราฟ
 showChartBtn.addEventListener("click",()=>{
-  modal.style.display="block";
-  const year=parseInt(yearSelect.value);
-  const months=Array.from({length:12},(_,i)=>i+1);
-  const otPerMonth=months.map(m=>{
-    const data=JSON.parse(localStorage.getItem(`otData_${year}_${m-1}`)||"[]");
-    return data.reduce((sum,d)=>sum+(parseFloat(d.ot1)||0)+(parseFloat(d.ot15)||0)+(parseFloat(d.ot3)||0),0);
-  });
-  if(otChartInstance) otChartInstance.destroy();
-  otChartInstance=new Chart(otChartCanvas,{
-    type:'bar',
-    data:{ labels:monthNames, datasets:[{label:`OT ปี ${year}`, data:otPerMonth, backgroundColor:'#42a5f5'}]},
-    options:{ responsive:true, plugins:{ legend:{display:false} } }
-  });
+    modal.style.display="block";
+    const months=Array.from({length:12},(_,i)=>i);
+    const ot1Data=[], ot15Data=[], ot3Data=[];
+    months.forEach(m=>{
+        const data=JSON.parse(localStorage.getItem(getKeyData(yearSelect.value,m))||"[]");
+        ot1Data.push(data.reduce((a,d)=>a+(parseFloat(d.ot1)||0),0));
+        ot15Data.push(data.reduce((a,d)=>a+(parseFloat(d.ot15)||0),0));
+        ot3Data.push(data.reduce((a,d)=>a+(parseFloat(d.ot3)||0),0));
+    });
+    if(otChartInstance) otChartInstance.destroy();
+    otChartInstance=new Chart(otChartCanvas,{
+        type:'bar',
+        data:{
+            labels:monthNamesTH,
+            datasets:[
+                {label:"OT1", data:ot1Data, backgroundColor:"#42a5f5"},
+                {label:"OT1.5", data:ot15Data, backgroundColor:"#ffca28"},
+                {label:"OT3", data:ot3Data, backgroundColor:"#ef5350"}
+            ]
+        },
+        options:{ responsive:true, plugins:{ legend:{position:'top'} } }
+    });
 });
-
 closeBtn.addEventListener("click",()=>{ modal.style.display="none"; });
 window.addEventListener("click",e=>{ if(e.target===modal) modal.style.display="none"; });
 
-// สร้างตารางครั้งแรก
+// เริ่มต้น
 createTable();
-
+});
 </script>
-
 </body>
 </html>
