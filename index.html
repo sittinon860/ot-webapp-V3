@@ -3,137 +3,158 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ทดลอง OT ระบบล็อกอิน+เซิร์ฟเวอร์</title>
+<title>ทดลองระบบ OT - Auto Save + Backup</title>
 <style>
-body{font-family:sans-serif; margin:10px; background:#f0f4ff;}
-h2{text-align:center;}
-input,button{padding:5px; margin:2px;}
-table{width:100%; border-collapse:collapse; margin-top:10px;}
-th,td{border:1px solid #555; padding:3px; text-align:center;}
-#loginDiv{max-width:300px;margin:50px auto;text-align:center;}
-#otDiv{display:none;}
+body { font-family: Arial,sans-serif; margin:10px; background:#f0f4ff; }
+h2 { text-align:center; color:#0d47a1; }
+table { width:100%; border-collapse:collapse; margin-top:10px; }
+th, td { border:1px solid #1976d2; padding:5px; text-align:center; }
+input[type=number] { width:50px; }
+.controls { margin:10px 0; text-align:center; }
+button { padding:5px 10px; margin:2px; border:none; border-radius:5px; background:#1e88e5; color:white; cursor:pointer; }
+button:hover { background:#1565c0; }
 </style>
 </head>
 <body>
 
-<div id="loginDiv">
-<h2>เข้าสู่ระบบ OT</h2>
-<label>รหัสพนักงาน 9 ตัว:</label><br>
-<input type="text" id="empCode" maxlength="9" placeholder="กรอกรหัสพนักงาน"><br>
-<button id="loginBtn">เข้าสู่ระบบ / ลงทะเบียน</button>
-<div id="loginMsg" style="color:red;margin-top:5px;"></div>
+<h2>เว็บทดลองระบบ OT</h2>
+
+<div class="controls">
+    <button id="backupBtn">สำรองข้อมูล</button>
+    <button id="restoreBtn">โหลดข้อมูลสำรอง</button>
 </div>
 
-<div id="otDiv">
-<h2>บันทึก OT ของคุณ</h2>
-<button id="logoutBtn">ออกจากระบบ</button>
-<button id="loadFromServerBtn">โหลดข้อมูลจากเซิร์ฟเวอร์</button>
-<table>
+<table id="otTable">
 <thead>
-<tr><th>วันที่</th><th>จำนวนชั่วโมง OT</th></tr>
+<tr>
+<th>วันที่</th><th>กะ</th><th>ชั่วโมง OT</th><th>หมายเหตุ</th>
+</tr>
 </thead>
-<tbody id="otTableBody"></tbody>
+<tbody></tbody>
 </table>
-<input type="date" id="otDate">
-<input type="number" id="otHours" min="0" max="12" step="0.5" placeholder="จำนวนชั่วโมง">
-<button id="addOTBtn">บันทึก OT</button>
-</div>
 
 <script>
-// ----------------------------
-// ระบบล็อกอิน
-const loginDiv=document.getElementById('loginDiv');
-const otDiv=document.getElementById('otDiv');
-const empInput=document.getElementById('empCode');
-const loginBtn=document.getElementById('loginBtn');
-const loginMsg=document.getElementById('loginMsg');
-let currentEmp="";
+const LOCAL_KEY = "otData_test";
+const BACKUP_KEY = "otData_backup";
+let isChanged = false;
 
-// ----------------------------
-// ระบบ OT
-const tbody=document.getElementById('otTableBody');
-const otDateInput=document.getElementById('otDate');
-const otHoursInput=document.getElementById('otHours');
+const tbody = document.querySelector("#otTable tbody");
 
-// ----------------------------
-// เซิร์ฟเวอร์จำลอง (API) 
-// สมมติเป็น https://example.com/api/otdata?empCode=XXX
-const SERVER_URL="https://example.com/api/otdata"; // ตัวอย่าง
+// สร้างตารางตัวอย่าง 16–25 ของเดือน
+function createTable(){
+    tbody.innerHTML="";
+    const today = new Date();
+    let startDate = new Date(today.getFullYear(), today.getMonth(), 16);
+    let endDate = new Date(today.getFullYear(), today.getMonth()+1, 15);
 
-// ----------------------------
-// login
-loginBtn.addEventListener('click',()=>{
-    const code=empInput.value.trim();
-    if(code.length!==9 || isNaN(code)){
-        loginMsg.textContent="รหัสพนักงานต้องเป็นตัวเลข 9 ตัว";
+    const savedData = JSON.parse(localStorage.getItem(LOCAL_KEY) || "[]");
+
+    let current = new Date(startDate);
+    while(current <= endDate){
+        const tr = document.createElement("tr");
+        const dateStr = `${current.getDate().toString().padStart(2,'0')}/${(current.getMonth()+1).toString().padStart(2,'0')}`;
+        tr.innerHTML = `
+            <td>${dateStr}</td>
+            <td>
+                <select>
+                    <option value=""></option>
+                    <option value="N1">N1</option>
+                    <option value="D1">D1</option>
+                    <option value="HD1">HD1</option>
+                    <option value="HN1">HN1</option>
+                </select>
+            </td>
+            <td><input type="number" min="0" max="12" step="0.5"></td>
+            <td><input type="text"></td>
+        `;
+
+        // โหลดข้อมูลเก่า
+        const found = savedData.find(d=>d.date===dateStr);
+        if(found){
+            tr.cells[1].querySelector("select").value = found.shift || "";
+            tr.cells[2].querySelector("input").value = found.hours || "";
+            tr.cells[3].querySelector("input").value = found.note || "";
+        }
+
+        // listener auto-save
+        tr.querySelectorAll("input, select").forEach(el=>{
+            el.addEventListener("input", saveData);
+            el.addEventListener("change", saveData);
+        });
+
+        tbody.appendChild(tr);
+        current.setDate(current.getDate()+1);
+    }
+}
+
+// บันทึกข้อมูลลง localStorage
+function saveData(){
+    const data = [];
+    tbody.querySelectorAll("tr").forEach(tr=>{
+        const date = tr.cells[0].textContent;
+        const shift = tr.cells[1].querySelector("select").value;
+        const hours = parseFloat(tr.cells[2].querySelector("input").value) || 0;
+        const note = tr.cells[3].querySelector("input").value;
+        data.push({date, shift, hours, note});
+    });
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+    isChanged = true;
+}
+
+// สำรองข้อมูล
+document.getElementById("backupBtn").addEventListener("click", ()=>{
+    const currentData = localStorage.getItem(LOCAL_KEY) || "[]";
+    const lastBackup = localStorage.getItem(BACKUP_KEY) || "[]";
+
+    if(currentData === lastBackup){
+        alert("✅ ข้อมูลล่าสุดได้สำรองไว้แล้ว");
         return;
     }
-    currentEmp=code;
-    loginDiv.style.display='none';
-    otDiv.style.display='block';
-    loginMsg.textContent="";
-    loadOTFromServer();
+
+    const blob = new Blob([currentData], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `OT_Backup_${new Date().toISOString()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    localStorage.setItem(BACKUP_KEY, currentData);
+    isChanged = false;
+    alert("✅ สำรองข้อมูลเรียบร้อย");
 });
 
-// logout
-document.getElementById('logoutBtn').addEventListener('click',()=>{
-    currentEmp="";
-    otDiv.style.display='none';
-    loginDiv.style.display='block';
-    empInput.value="";
-    loginMsg.textContent="";
+// โหลดข้อมูลสำรอง
+document.getElementById("restoreBtn").addEventListener("click", ()=>{
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = e=>{
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = evt=>{
+            localStorage.setItem(LOCAL_KEY, evt.target.result);
+            createTable();
+            isChanged = false;
+            alert("✅ โหลดข้อมูลสำรองเรียบร้อย");
+        };
+        reader.readAsText(file);
+    };
+    input.click();
 });
 
-// ----------------------------
-// เพิ่ม OT
-document.getElementById('addOTBtn').addEventListener('click',()=>{
-    const date=otDateInput.value;
-    const hours=parseFloat(otHoursInput.value);
-    if(!date || isNaN(hours) || hours<=0){ alert("กรุณากรอกวันที่และจำนวนชั่วโมง"); return; }
-
-    // ส่งข้อมูลไปเซิร์ฟเวอร์
-    const data={ empCode: currentEmp, date, hours };
-    saveToServer(data);
+// ป๊อบอัพก่อนออกจากหน้าเว็บ
+window.addEventListener("beforeunload", (e)=>{
+    const currentData = localStorage.getItem(LOCAL_KEY) || "[]";
+    const lastBackup = localStorage.getItem(BACKUP_KEY) || "[]";
+    if(currentData !== lastBackup){
+        e.preventDefault();
+        e.returnValue = "คุณยังไม่ได้สำรองข้อมูล OT! หากออกจากหน้านี้ข้อมูลล่าสุดอาจหายได้";
+    }
 });
 
-// โหลดข้อมูลจากเซิร์ฟเวอร์
-document.getElementById('loadFromServerBtn').addEventListener('click',()=>{
-    loadOTFromServer();
-});
-
-// ----------------------------
-// ฟังก์ชันจำลอง server API
-function saveToServer(data){
-    // ตัวอย่าง fetch POST
-    fetch(SERVER_URL, {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify(data)
-    })
-    .then(res=>res.json())
-    .then(res=>{
-        console.log("บันทึกข้อมูลไป server:",res);
-        loadOTFromServer(); // โหลดข้อมูลล่าสุด
-    })
-    .catch(err=>{ console.error("เกิดข้อผิดพลาด:",err); alert("ไม่สามารถบันทึกไป server ได้"); });
-}
-
-function loadOTFromServer(){
-    if(!currentEmp) return;
-    fetch(`${SERVER_URL}?empCode=${currentEmp}`)
-    .then(res=>res.json())
-    .then(data=>{
-        tbody.innerHTML="";
-        data.forEach(d=>{
-            const tr=document.createElement('tr');
-            const tdDate=document.createElement('td'); tdDate.textContent=d.date;
-            const tdHours=document.createElement('td'); tdHours.textContent=d.hours;
-            tr.appendChild(tdDate); tr.appendChild(tdHours);
-            tbody.appendChild(tr);
-        });
-    })
-    .catch(err=>{ console.error("โหลดข้อมูลจาก server ล้มเหลว:",err); alert("โหลดข้อมูลไม่สำเร็จ"); });
-}
+createTable();
 </script>
 
 </body>
