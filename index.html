@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>โน็ตบันทึกชั่วโมงOT รอบวันที่16-15 (ซิงก์ Google Drive)</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://apis.google.com/js/api.js" async defer></script>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-B2CJVLLCLN"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-B2CJVLLCLN');
+</script>  
+
+<style>
+/* CSS หลัก */
+* { box-sizing: border-box; }
+body { font-family: Arial,sans-serif; margin:5px; background:linear-gradient(135deg,#f0f4ff,#d9e8ff);}
+h2{ text-align:center; color:#0d47a1; text-shadow:1px 1px 2px #aaa; margin-bottom:5px;}
+.instructions{ background:#e3f2fd; border-left:4px solid #1976d2; padding:5px 10px; margin-bottom:5px; font-size:12px; line-height:1.4;}
+.credit{ text-align:center; font-size:11px; color:#555; margin-bottom:5px;}
+.version{ text-align:center; font-size:13px; color:#ff6f00; font-weight:bold; margin-bottom:10px; text-shadow:1px 1px 2px #aaa;}
+.controls{ display:flex; flex-wrap:wrap; gap:5px; align-items:center; justify-content:center; margin-bottom:5px;}
+/* สไตล์ปุ่ม */
+select,button{ padding:5px 8px; font-size:13px; border-radius:8px; border:1px solid #1976d2; background:linear-gradient(to bottom,#42a5f5,#1e88e5); color:white; cursor:pointer; box-shadow:2px 2px 5px rgba(0,0,0,0.2); transition:transform 0.1s;}
+select:hover,button:hover{ transform:translateY(-2px);}
+/* ปุ่มกราฟ */
+#showChartBtn{ background:linear-gradient(to bottom,#ff9800,#f57c00); border:1px solid #e65100; }
+#showChartBtn:hover{ transform:translateY(-2px); background:linear-gradient(to bottom,#f57c00,#e65100); }
+/* ปุ่มล้างข้อมูล */
+#resetBtn{ background:linear-gradient(to bottom,#f44336,#d32f2f); border:1px solid #c62828; }
+#resetBtn:hover{ transform:translateY(-2px); background:linear-gradient(to bottom,#d32f2f,#c62828); }
+
+.checkbox-container{ display:flex; flex-wrap:wrap; justify-content:center; gap:3px; font-size:12px; margin-bottom:5px;}
+.summary{ text-align:center; background:linear-gradient(to right,#a8ff78,#78ffd6); padding:5px 10px; border-radius:12px; font-weight:bold; font-size:12px; box-shadow:1px 2px 6px rgba(0,0,0,0.2); margin-bottom:10px;}
+table{ width:100%; border-collapse:collapse; background:white; font-size:11px; border-radius:12px; overflow:hidden; box-shadow:0 5px 15px rgba(0,0,0,0.2);}
+th,td{ border:1px solid #ddd; padding:3px; text-align:center; vertical-align:middle; transition:all 0.2s;}
+th{ background:linear-gradient(to bottom,#1976d2,#42a5f5); color:white; text-shadow:1px 1px 2px #333;}
+tr:hover{ background:#e3f2fd; transform:scale(1.02); box-shadow:0 4px 10px rgba(0,0,0,0.2);}
+input[type="number"], input[type="text"], select{ width:100%; padding:2px; font-size:11px; border-radius:6px; border:1px solid #1976d2; box-shadow:inset 1px 1px 3px rgba(0,0,0,0.1);}
+.holiday-personal{ background:#ffd3d3; border-left:4px solid #ff1744; font-weight:bold;}
+.holiday-ot{ background:#fff3b2 !important; border-left:4px solid #ffc400; font-weight:bold;}
+@media(max-width:480px){h2{font-size:16px;} .controls{flex-direction:column;align-items:stretch;} select,button{font-size:11px;width:100%;} .checkbox-container{font-size:10px;} .summary{font-size:11px;} th,td{font-size:10px;padding:1px;} input[type="number"],input[type="text"],select{font-size:10px;}}
+.td-shift .shift-label{ font-weight:bold; margin-bottom:2px; display:block; color:#0d47a1; text-shadow:1px 1px 1px #aaa; }
+.td-shift select{ border-radius:6px; border:1px solid #1976d2; appearance:none; -webkit-appearance:none; -moz-appearance:none;
+background:white url('data:image/svg+xml;utf8,<svg fill="gray" height="12" viewBox="0 0 24 24" width="12" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat right 5px center; background-size:12px 12px;}
+
+/* Modal */
+.modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
+.modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border-radius: 12px; width: 90%; max-width: 800px; box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19); animation-name: animatetop; animation-duration: 0.4s }
+@keyframes animatetop { from {top: -300px; opacity: 0} to {top: 0; opacity: 1} }
+.close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold;}
+.close-btn:hover, .close-btn:focus { color: #000; text-decoration: none; cursor: pointer; }
+.chart-container { position: relative; height: 400px; width: 100%; }
+.chart-controls { text-align: center; margin-bottom: 10px; font-size: 14px; font-weight: bold; }
+
+/* Google Sign-In Styles */
+#google-login-container { text-align: center; margin-bottom: 15px; }
+#signout-button { margin-top: 10px; background:linear-gradient(to bottom,#546e7a,#37474f); border:1px solid #263238; }
+#sync-status { text-align: center; margin-bottom: 5px; font-size: 12px; color: #1e88e5; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h2>โน็ตบันทึกชั่วโมงOT รอบวันที่16-15 (ซิงก์ Google Drive)</h2>
+
+<div class="credit">ออกแบบเว็บนี้โดย: สิทธินน</div>
+<div class="version">เวอร์ชั่น 4.0 (ซิงก์ Google Drive)</div>
+
+<div id="google-login-container">
+    <div id="g_id_onload"
+         data-client_id="YOUR_CLIENT_ID" data-callback="handleCredentialResponse"
+         data-auto_prompt="false">
+    </div>
+    <div class="g_id_signin"
+         data-type="standard"
+         data-size="large"
+         data-theme="outline"
+         data-text="sign_in_with"
+         data-shape="rectangular"
+         data-logo_alignment="left">
+    </div>
+    <div id="user-info-display" style="margin-top:5px; font-size:14px; font-weight:bold; color:#0d47a1; display:none;"></div>
+    <button id="signout-button" style="display:none;">ออกจากระบบ Google</button>
+</div>
+<div id="sync-status">สถานะ: ไม่ได้เชื่อมต่อ Google Drive</div>
+<div class="instructions">
+<b>วิธีใช้งาน:</b><br>
+1. **ล็อกอินด้วย Google** เพื่อเปิดใช้งานการซิงก์ข้อมูลกับ Drive<br>
+2. เลือกวันหยุดส่วนตัวที่ต้องการ, เลือกกะ, กรอกชั่วโมง OT<br>
+3. ข้อมูลจะถูกบันทึกใน LocalStorage และ **Google Drive** อัตโนมัติ<br>
+</div>
+
+<div class="controls">
+เดือน: <select id="month"></select>
+ปี: <select id="year"></select>
+<button id="resetBtn">ล้างข้อมูลเดือนนี้</button>
+<button id="showChartBtn">สรุป OT รายปี</button>
+</div>
+
+<div class="checkbox-container">
+วันหยุดส่วนตัว:
+<label><input type="checkbox" value="1"> จันทร์</label>
+<label><input type="checkbox" value="2"> อังคาร</label>
+<label><input type="checkbox" value="3"> พุธ</label>
+<label><input type="checkbox" value="4"> พฤหัส</label>
+<label><input type="checkbox" value="5"> ศุกร์</label>
+<label><input type="checkbox" value="6"> เสาร์</label>
+<label><input type="checkbox" value="0"> อาทิตย์</label>
+</div>
+
+<div class="summary" id="summary">รวม OT1:0 | OT1.5:0 | OT3:0</div>
+
+<table id="otTable">
+<thead>
+<tr>
+<th>วันที่</th><th>วัน</th><th>กะ</th><th>ชั่วโมง OT</th>
+<th>OT1</th><th>OT1.5</th><th>OT3</th>
+<th>เวลาเข้า–ออก</th><th>หมายเหตุ</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+<div id="chartModal" class="modal">
+  <div class="modal-content">
+    <span class="close-btn">&times;</span>
+    <h3 style="text-align:center; color:#0d47a1;">สรุปชั่วโมง OT รายปี</h3>
+    <div class="chart-controls">
+        เลือกปี: <select id="yearChartSelect"></select>
+    </div>
+    <div class="chart-container">
+        <canvas id="otChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+    const dayNames=["อาทิตย์","จันทร์","อังคาร","พุธ","พฤหัส","ศุกร์","เสาร์"];
+    const monthNamesTH = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+    const monthSelect=document.getElementById("month");
+    const yearSelect=document.getElementById("year");
+    const yearChartSelect=document.getElementById("yearChartSelect");
+    const tbody=document.getElementById("otTable").querySelector("tbody");
+    const summary=document.getElementById("summary");
+    const checkboxes=document.querySelectorAll(".checkbox-container input[type=checkbox]");
+    const modal = document.getElementById("chartModal");
+    const btn = document.getElementById("showChartBtn");
+    const span = document.getElementsByClassName("close-btn")[0];
+    const signoutBtn = document.getElementById("signout-button");
+    const syncStatus = document.getElementById("sync-status");
+
+    let userHolidays=[];
+    let otChartInstance = null;
+    let driveFileId = null; // ID ของไฟล์ข้อมูล OT ใน Google Drive
+    let accessToken = null; // Access Token สำหรับ Google API
+
+    const FILE_NAME = "OT_Tracker_Data.json";
+    const MIME_TYPE = 'application/json';
+    const GSI_CLIENT_ID = "YOUR_CLIENT_ID"; // 🌟 ต้องเปลี่ยนเป็น Client ID ของคุณ
+
+    const today = new Date();
+    const currentYear = today.getFullYear();
+
+    // ----------------------------------------------------
+    // --- Google Sign-In & Drive API Functions ---
+    // ----------------------------------------------------
+
+    /**
+     * @description Handle the response from Google Sign-In (Credential or Token)
+     */
+    window.handleCredentialResponse = (response) => {
+        if (response.credential) {
+            // This is ID token response (not needed for Drive API, but can get user info)
+            const payload = JSON.parse(atob(response.credential.split('.')[1]));
+            document.getElementById('user-info-display').textContent = `ยินดีต้อนรับ: ${payload.name} (${payload.email})`;
+            document.getElementById('user-info-display').style.display = 'block';
+        }
+
+        // Get Access Token for Drive API
+        // This is done via Google's new Authorization Code Flow or using the gapi.client after init
+        // For simplicity and direct Drive access, we'll request the token after successful sign-in
+        const tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: GSI_CLIENT_ID,
+            scope: 'https://www.googleapis.com/auth/drive.file openid email profile',
+            callback: (tokenResponse) => {
+                if (tokenResponse && tokenResponse.access_token) {
+                    accessToken = tokenResponse.access_token;
+                    syncStatus.textContent = "สถานะ: กำลังเชื่อมต่อ Google Drive...";
+                    gapi.load('client', initClient);
+                } else {
+                    console.error("Failed to get access token for Drive.");
+                    syncStatus.textContent = "สถานะ: ล้มเหลวในการเชื่อมต่อ Drive";
+                }
+            },
+        });
+        tokenClient.requestAccessToken();
+
+        // Update UI
+        document.querySelector('.g_id_signin').style.display = 'none';
+        signoutBtn.style.display = 'block';
+    }
+
+    /**
+     * @description Initialize Google API client and check for existing file
+     */
+    function initClient() {
+        gapi.client.init({}).then(function() {
+            gapi.client.setToken({ access_token: accessToken });
+            searchFile();
+        }, function(error) {
+            console.error('Error initializing GAPI client', error);
+            syncStatus.textContent = "สถานะ: ล้มเหลวในการเชื่อมต่อ GAPI";
+        });
+    }
+
+    /**
+     * @description Search for the OT data file in Google Drive
+     */
+    function searchFile() {
+        const query = `name = '${FILE_NAME}' and trashed = false`;
+        gapi.client.drive.files.list({
+            q: query,
+            fields: 'files(id, name)',
+            spaces: 'drive',
+        }).then(function(response) {
+            const files = response.result.files;
+            if (files.length > 0) {
+                driveFileId = files[0].id;
+                console.log('Found file ID:', driveFileId);
+                syncStatus.textContent = "สถานะ: เชื่อมต่อ Google Drive สำเร็จ";
+                syncDataFromCloud();
+            } else {
+                console.log('File not found. Creating new file.');
+                syncStatus.textContent = "สถานะ: สร้างไฟล์ใหม่บน Google Drive...";
+                createFileOnDrive();
+            }
+        }, function(error) {
+            console.error('Error searching file:', error);
+            syncStatus.textContent = "สถานะ: ล้มเหลวในการค้นหาไฟล์";
+        });
+    }
+
+    /**
+     * @description Create the initial OT data file on Google Drive
+     */
+    function createFileOnDrive() {
+        const fileMetadata = {
+            'name': FILE_NAME,
+            'mimeType': MIME_TYPE
+        };
+        const content = JSON.stringify({}); // Initial empty data structure
+
+        const boundary = 'OT-TRACKER-BOUNDARY';
+        const delimiter = "\r\n--" + boundary + "\r\n";
+        const close_delimiter = "\r\n--" + boundary + "--";
+
+        const multipartRequestBody =
+            delimiter + 'Content-Type: application/json\r\n\r\n' +
+            JSON.stringify(fileMetadata) +
+            delimiter + 'Content-Type: ' + MIME_TYPE + '\r\n\r\n' +
+            content +
+            close_delimiter;
+
+        gapi.client.request({
+            'path': '/upload/drive/v3/files',
+            'method': 'POST',
+            'params': { 'uploadType': 'multipart' },
+            'headers': {
+                'Content-Type': 'multipart/mixed; boundary="' + boundary + '"'
+            },
+            'body': multipartRequestBody
+        }).then(function(response) {
+            driveFileId = response.result.id;
+            console.log('File created, ID:', driveFileId);
+            syncStatus.textContent = "สถานะ: สร้างไฟล์บน Google Drive สำเร็จ";
+            syncDataFromCloud(); // Now sync data from local to cloud (empty local storage)
+        }, function(error) {
+            console.error('Error creating file:', error);
+            syncStatus.textContent = "สถานะ: ล้มเหลวในการสร้างไฟล์";
+        });
+    }
+
+    /**
+     * @description Load all OT data from Google Drive
+     */
+    function loadDataFromDrive() {
+        return new Promise((resolve, reject) => {
+            if (!driveFileId || !gapi.client.drive) {
+                return reject("Drive not connected or file ID missing.");
+            }
+            gapi.client.drive.files.get({
+                fileId: driveFileId,
+                alt: 'media'
+            }).then(function(response) {
+                resolve(response.result);
+            }, function(error) {
+                console.error('Error loading data from Drive:', error);
+                reject(error);
+            });
+        });
+    }
+
+    /**
+     * @description Save all data from localStorage to Google Drive
+     */
+    function saveDataToDrive() {
+        if (!driveFileId || !gapi.client.drive) return;
+        
+        syncStatus.textContent = "สถานะ: กำลังอัปโหลดข้อมูล...";
+        
+        // 1. Combine ALL localStorage data for ALL keys into one object
+        const allLocalData = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith('otData_') || key.startsWith('holidays_') || key.startsWith('lastSelected')) {
+                allLocalData[key] = localStorage.getItem(key);
+            }
+        }
+        
+        const content = JSON.stringify(allLocalData);
+        const fileMetadata = { 'name': FILE_NAME, 'mimeType': MIME_TYPE };
+
+        const boundary = 'OT-TRACKER-BOUNDARY';
+        const delimiter = "\r\n--" + boundary + "\r\n";
+        const close_delimiter = "\r\n--" + boundary + "--";
+
+        const multipartRequestBody =
+            delimiter + 'Content-Type: application/json\r\n\r\n' +
+            JSON.stringify(fileMetadata) +
+            delimiter + 'Content-Type: ' + MIME_TYPE + '\r\n\r\n' +
+            content +
+            close_delimiter;
+
+        gapi.client.request({
+            'path': `/upload/drive/v3/files/${driveFileId}`,
+            'method': 'PATCH',
+            'params': { 'uploadType': 'multipart' },
+            'headers': {
+                'Content-Type': 'multipart/mixed; boundary="' + boundary + '"'
+            },
+            'body': multipartRequestBody
+        }).then(function() {
+            console.log('Data successfully saved to Drive.');
+            syncStatus.textContent = "สถานะ: ซิงก์ข้อมูลกับ Drive สำเร็จ";
+        }, function(error) {
+            console.error('Error saving data to Drive:', error);
+            syncStatus.textContent = "สถานะ: ล้มเหลวในการซิงก์ข้อมูล";
+        });
+    }
+
+    /**
+     * @description Main sync function: Drive -> LocalStorage
+     */
+    function syncDataFromCloud() {
+        loadDataFromDrive().then(cloudData => {
+            // Clear local storage of OT data keys before syncing
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key.startsWith('otData_') || key.startsWith('holidays_') || key.startsWith('lastSelected')) {
+                    localStorage.removeItem(key);
+                }
+            }
+            
+            // Populate localStorage with cloud data
+            for (const key in cloudData) {
+                localStorage.setItem(key, cloudData[key]);
+            }
+            
+            console.log('Data synced from cloud to local storage.');
+            // Re-load initial values and render table
+            loadInitialSettings();
+            createTable();
+            syncStatus.textContent = "สถานะ: ซิงก์ข้อมูลกับ Drive สำเร็จ";
+
+        }).catch(error => {
+            console.warn('Could not load data from cloud, using local storage/defaults.', error);
+            // If Drive fails to load or file is new, just use whatever is in localStorage (or defaults)
+            loadInitialSettings();
+            createTable();
+        });
+    }
+    
+    // Sign Out Handler
+    signoutBtn.addEventListener('click', () => {
+        if (accessToken) {
+            google.accounts.oauth2.revoke(accessToken, () => {
+                console.log('Token revoked');
+                accessToken = null;
+                driveFileId = null;
+                syncStatus.textContent = "สถานะ: ไม่ได้เชื่อมต่อ Google Drive";
+                document.querySelector('.g_id_signin').style.display = 'block';
+                signoutBtn.style.display = 'none';
+                document.getElementById('user-info-display').style.display = 'none';
+            });
+        }
+    });
+
+    // ----------------------------------------------------
+    // --- Local Storage and Table Functions (Modified) ---
+    // ----------------------------------------------------
+    
+    // Helper function to load selected month/year from localStorage
+    function loadInitialSettings() {
+        const savedMonth=localStorage.getItem("lastSelectedMonth");
+        const savedYear=localStorage.getItem("lastSelectedYear");
+        monthSelect.value=savedMonth!==null?savedMonth:today.getMonth();
+        yearSelect.value=savedYear!==null?savedYear:currentYear;
+        yearChartSelect.value = currentYear;
+    }
+
+    // โหลด Dropdown เดือน/ปี (unchanged)
+    for(let m=0;m<12;m++){
+        const opt=document.createElement("option"); opt.value=m;
+        opt.text=new Date(2025,m).toLocaleString("th-TH",{month:"long"});
+        monthSelect.appendChild(opt);
+    }
+    for(let y=currentYear-2;y<=currentYear+2;y++){
+        const opt=document.createElement("option"); opt.value=y; opt.text=y; yearSelect.appendChild(opt);
+        const optChart=document.createElement("option"); optChart.value=y; optChart.text=y; yearChartSelect.appendChild(optChart);
+    }
+
+    // เรียกใช้ loadInitialSettings แทนการโหลดค่าตรงๆ
+    loadInitialSettings(); 
+
+
+    function getKeyData(year, month){ 
+        if(typeof year === 'undefined') year = yearSelect.value;
+        if(typeof month === 'undefined') month = monthSelect.value;
+        return `otData_${year}-${parseInt(month)+1}`;
+    }
+    function getKeyHoliday(){return `holidays_${yearSelect.value}-${parseInt(monthSelect.value)+1}`;}
+
+    // ----------------------------------------------------
+    function loadHolidays(){
+        const saved = JSON.parse(localStorage.getItem(getKeyHoliday()) || "[]");
+        userHolidays = saved.map(d => parseInt(d));
+        checkboxes.forEach(cb => cb.checked = userHolidays.includes(parseInt(cb.value)));
+    }
+
+    checkboxes.forEach(cb => cb.addEventListener("change", () => {
+        userHolidays = Array.from(checkboxes).filter(c=>c.checked).map(cb=>parseInt(cb.value));
+        localStorage.setItem(getKeyHoliday(), JSON.stringify(userHolidays));
+        createTable();
+        saveDataToDrive(); // 💡 Sync to Drive
+    }));
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+        if(confirm("คุณต้องการล้างข้อมูล OT และวันหยุดส่วนตัวสำหรับรอบเดือนนี้เท่านั้น ใช่หรือไม่?")){
+            localStorage.removeItem(getKeyData()); 
+            localStorage.removeItem(getKeyHoliday());
+            createTable();
+            saveDataToDrive(); // 💡 Sync to Drive
+        }
+    });
+
+    // ----------------------------------------------------
+    function createTable(){
+        tbody.innerHTML="";
+
+        // โหลดวันหยุดส่วนตัวก่อน
+        loadHolidays();
+
+        const currentMonth = parseInt(monthSelect.value);
+        const currentYear = parseInt(yearSelect.value);
+
+        // บันทึกค่าเดือน/ปีล่าสุด
+        localStorage.setItem("lastSelectedMonth",currentMonth);
+        localStorage.setItem("lastSelectedYear",currentYear);
+
+        let startDate = new Date(currentYear, currentMonth, 16);
+        let endMonth = currentMonth + 1; 
+        let endYear = currentYear;
+        if (endMonth > 11){ endMonth = 0; endYear += 1; }
+        let endDate = new Date(endYear, endMonth, 15);
+
+        const savedData = JSON.parse(localStorage.getItem(getKeyData()) || "[]"); 
+        let current = new Date(startDate);
+
+        while(current <= endDate){
+            const tr = document.createElement("tr");
+            const day = current.getDay();
+            const thYear = current.getFullYear()+543;
+            const formattedDate = `${current.getDate().toString().padStart(2,'0')}/${(current.getMonth()+1).toString().padStart(2,'0')}/${thYear}`;
+
+            // วันที่
+            const tdDate = document.createElement("td"); tdDate.textContent = formattedDate; tr.appendChild(tdDate);
+            // วัน
+            const tdDay = document.createElement("td"); tdDay.textContent = dayNames[day]; tr.appendChild(tdDay);
+            // กะ
+            const tdShift = document.createElement("td"); tdShift.classList.add("td-shift");
+            const shiftLabel = document.createElement("div"); shiftLabel.classList.add("shift-label"); tdShift.appendChild(shiftLabel);
+            const selectShift = document.createElement("select");
+            ["","N1","D1","HD1","HN1"].forEach(v=>{ const opt=document.createElement("option"); opt.value=v; opt.text=v; selectShift.appendChild(opt); });
+            tdShift.appendChild(selectShift); tr.appendChild(tdShift);
+            // ชั่วโมง OT
+            const tdHours = document.createElement("td");
+            const inputHours = document.createElement("input"); inputHours.type="number"; inputHours.min=0; inputHours.max=12; inputHours.step=0.5; inputHours.style.display="none";
+            tdHours.appendChild(inputHours); tr.appendChild(tdHours);
+            // OT1 / OT1.5 / OT3
+            const tdOT1=document.createElement("td"), tdOT15=document.createElement("td"), tdOT3=document.createElement("td"); tr.appendChild(tdOT1); tr.appendChild(tdOT15); tr.appendChild(tdOT3);
+            // เวลาเข้า-ออก
+            const tdTime=document.createElement("td"); tr.appendChild(tdTime);
+            // หมายเหตุ
+            const tdNote=document.createElement("td"); const inputNote=document.createElement("input"); inputNote.type="text"; tdNote.appendChild(inputNote); tr.appendChild(tdNote);
+
+            // ✅ แสดงสีวันหยุดส่วนตัว
+            if(userHolidays.includes(day)) tr.classList.add("holiday-personal");
+
+            tbody.appendChild(tr);
+
+            // โหลดข้อมูลเก่า
+            const idx = savedData.findIndex(d => d.date === formattedDate);
+            if(idx >= 0){
+                const d = savedData[idx];
+                selectShift.value = d.shift; shiftLabel.textContent = d.shift;
+                if(d.shift) inputHours.style.display = "inline-block";
+                inputHours.value = d.hours;
+                tdOT1.textContent = d.ot1 || ""; tdOT15.textContent = d.ot15 || ""; tdOT3.textContent = d.ot3 || "";
+                tdTime.textContent = d.time || ""; inputNote.value = d.note || "";
+                if(d.shift=="HD1"||d.shift=="HN1"){ tr.classList.remove("holiday-personal"); tr.classList.add("holiday-ot"); }
+            }
+
+            // Event change shift
+            selectShift.addEventListener("change", ()=>{
+                shiftLabel.textContent = selectShift.value;
+                if(selectShift.value){ inputHours.style.display="inline-block"; } else { inputHours.style.display="none"; inputHours.value=""; }
+                if(selectShift.value=="HD1"||selectShift.value=="HN1"){ tr.classList.remove("holiday-personal"); tr.classList.add("holiday-ot"); inputNote.value="OT วันหยุด"; }
+                else if(userHolidays.includes(day)){ tr.classList.add("holiday-personal"); tr.classList.remove("holiday-ot"); inputNote.value=""; }
+                else { tr.classList.remove("holiday-personal","holiday-ot"); inputNote.value=""; }
+                updateRow(tr, selectShift, inputHours, current);
+            });
+
+            inputHours.addEventListener("input", ()=>{ updateRow(tr, selectShift, inputHours, current); });
+            // New: Note change handler to save data immediately
+            inputNote.addEventListener("input", ()=>{ saveData(); saveDataToDrive(); });
+
+
+            current.setDate(current.getDate()+1);
+        }
+        updateSummary();
+    }
+
+    function updateRow(tr, selectShift, inputHours, current){
+        const tds = tr.querySelectorAll("td");
+        const shift = selectShift.value;
+        const hours = parseFloat(inputHours.value || 0);
+        const tdOT1 = tds[4], tdOT15 = tds[5], tdOT3 = tds[6], tdTime = tds[7], tdNote = tds[8].querySelector("input");
+        let ot1=0, ot15=0, ot3=0, startTime="";
+        tdOT1.textContent = ""; tdOT15.textContent = ""; tdOT3.textContent = ""; tdTime.textContent = "";
+
+        if(hours>0){
+            if(shift=="N1"||shift=="D1"){ ot15 = hours; startTime = (shift=="N1")?"03:45":"15:45"; if(hours>0 && hours<=3){ tdNote.value="ตัดกลับ"; } else if(shift=="N1" || shift=="D1"){ tdNote.value=""; } }
+            else if(shift=="HD1"||shift=="HN1"){ startTime=(shift=="HD1")?"07:45":"19:45"; if(hours<=8){ ot1=hours; } else { ot1=8; ot3=hours-8; } tdNote.value="OT วันหยุด"; }
+            if(startTime){ tdTime.textContent=`${startTime} – ${addHours(startTime,hours)}`; }
+        } else {
+             if(shift=="HD1"||shift=="HN1"){ tdNote.value="OT วันหยุด"; }
+             else if(shift=="N1"||shift=="D1"){ tdNote.value=""; }
+        }
+
+        tdOT1.textContent = ot1?ot1.toFixed(2):"";
+        tdOT15.textContent = ot15?ot15.toFixed(2):"";
+        tdOT3.textContent = ot3?ot3.toFixed(2):"";
+
+        saveData(); 
+        updateSummary();
+        saveDataToDrive(); // 💡 Sync to Drive after local save
+    }
+
+    function addHours(start,h){ 
+        let [hh,mm] = start.split(":").map(Number); 
+        let totalMinutes = (hh*60) + mm + Math.round(h*60); 
+        let days = Math.floor(totalMinutes / (24*60)); // Count days passed for future use (if needed)
+        let newH = Math.floor(totalMinutes/60)%24;
+        let newM = totalMinutes%60;
+        let timeStr = `${newH.toString().padStart(2,'0')}:${newM.toString().padStart(2,'0')}`;
+        // Optional: Add indicator for the next day
+        return (days > 0) ? `${timeStr} (+${days}d)` : timeStr;
+    }
+
+    function updateSummary(){
+        let ot1=0, ot15=0, ot3=0;
+        tbody.querySelectorAll("tr").forEach(tr=>{ ot1+=parseFloat(tr.cells[4].textContent||0); ot15+=parseFloat(tr.cells[5].textContent||0); ot3+=parseFloat(tr.cells[6].textContent||0); });
+        summary.textContent=`รวม OT1:${ot1.toFixed(2)} | OT1.5:${ot15.toFixed(2)} | OT3:${ot3.toFixed(2)}`;
+    }
+
+    function saveData(){
+        const data=[];
+        tbody.querySelectorAll("tr").forEach(tr=>{
+            const date=tr.cells[0].textContent;
+            const selectElement = tr.cells[2].querySelector("select");
+            const shift=selectElement.value;
+            const inputHoursElement=tr.cells[3].querySelector("input");
+            const hours=parseFloat(inputHoursElement.value||0);
+            const ot1=tr.cells[4].textContent;
+            const ot15=tr.cells[5].textContent;
+            const ot3=tr.cells[6].textContent;
+            const time=tr.cells[7].textContent;
+            const note=tr.cells[8].querySelector("input").value;
+            data.push({date,shift,hours,ot1,ot15,ot3,time,note});
+        });
+        localStorage.setItem(getKeyData(),JSON.stringify(data));
+    }
+
+    // ----------------------------------------------------
+    // กราฟ OT รายปี (Unchanged)
+    // ----------------------------------------------------
+    function getMonthlySummaryData(selectedYear){
+        const data=[]; const labels=[];
+        for(let month=0; month<12; month++){
+            const key=getKeyData(selectedYear,month);
+            const savedData=JSON.parse(localStorage.getItem(key)||'[]');
+            let ot1=0,ot15=0,ot3=0;
+            savedData.forEach(d=>{ ot1+=parseFloat(d.ot1||0); ot15+=parseFloat(d.ot15||0); ot3+=parseFloat(d.ot3||0); });
+            labels.push(`${monthNamesTH[month]}/${selectedYear%100}`);
+            data.push({ monthYear:`${monthNamesTH[month]} ${selectedYear}`, ot1:parseFloat(ot1.toFixed(2)), ot15:parseFloat(ot15.toFixed(2)), ot3:parseFloat(ot3.toFixed(2)), total:parseFloat((ot1+ot15+ot3).toFixed(2)) });
+        }
+        return { labels, data };
+    }
+
+    function renderChart(summaryData){
+        const ctx=document.getElementById('otChart').getContext('2d');
+        if(otChartInstance){ otChartInstance.destroy(); }
+        otChartInstance=new Chart(ctx,{
+            type:'bar',
+            data:{
+                labels:summaryData.labels,
+                datasets:[
+                    { label:'ชั่วโมง OT1', data:summaryData.data.map(d=>d.ot1), backgroundColor:'rgba(255, 99, 132, 0.8)', borderColor:'rgba(255, 99, 132, 1)', borderWidth:1 },
+                    { label:'ชั่วโมง OT1.5', data:summaryData.data.map(d=>d.ot15), backgroundColor:'rgba(54, 162, 235, 0.8)', borderColor:'rgba(54, 162, 235, 1)', borderWidth:1 },
+                    { label:'ชั่วโมง OT3', data:summaryData.data.map(d=>d.ot3), backgroundColor:'rgba(75, 192, 192, 0.8)', borderColor:'rgba(75, 192, 192, 1)', borderWidth:1 }
+                ]
+            },
+            options:{
+                responsive:true,
+                maintainAspectRatio:false,
+                plugins:{
+                    title:{ display:true, text:`ชั่วโมง OT รวมแยกตามประเภท (12 รอบการจ่ายของปี ${yearChartSelect.value})` },
+                    tooltip:{
+                        callbacks:{
+                            label:(tooltipItem)=>{ const label=tooltipItem.dataset.label||''; const value=tooltipItem.parsed.y; return `${label}: ${value.toFixed(2)} ชั่วโมง`; },
+                            footer:(tooltipItems)=>{ const currentMonthData=summaryData.data[tooltipItems[0].dataIndex]; return [`------------------------`,`OT1: ${currentMonthData.ot1.toFixed(2)} ชั่วโมง`,`OT1.5: ${currentMonthData.ot15.toFixed(2)} ชั่วโมง`,`OT3: ${currentMonthData.ot3.toFixed(2)} ชั่วโมง`,`รวมทั้งหมด: ${currentMonthData.total.toFixed(2)} ชั่วโมง`]; }
+                        }
+                    }
+                },
+                scales:{ x:{ stacked:true, title:{ display:true, text:'รอบเดือน' } }, y:{ stacked:true, beginAtZero:true, title:{ display:true, text:'ชั่วโมง OT' } } }
+            }
+        });
+    }
+
+
+    // ----------------------------------------------------
+    // Event Listeners หลัก
+    monthSelect.addEventListener("change", () => { createTable(); saveDataToDrive(); }); // 💡 Sync to Drive
+    yearSelect.addEventListener("change", () => { createTable(); saveDataToDrive(); }); // 💡 Sync to Drive
+
+    yearChartSelect.addEventListener("change", ()=>{
+        const selectedYear=parseInt(yearChartSelect.value);
+        const { labels, data: monthlyData } = getMonthlySummaryData(selectedYear);
+        const chartData = { labels: labels, data: monthlyData };
+        renderChart(chartData);
+    });
+
+    btn.onclick=function(){
+        const selectedYear=parseInt(yearChartSelect.value);
+        const { labels, data: monthlyData } = getMonthlySummaryData(selectedYear);
+        const chartData={ labels: labels, data: monthlyData };
+        renderChart(chartData);
+        modal.style.display="block";
+    }
+
+    span.onclick=function(){ modal.style.display="none"; }
+    window.onclick=function(event){ if(event.target==modal){ modal.style.display="none"; } }
+
+    // Initial load will use local storage data or defaults first.
+    // Drive sync will take over if logged in.
+    // If the user is logged in, the `handleCredentialResponse` will trigger the full sync.
+    // If not, the table is created with local data.
+    if (!accessToken) {
+        createTable(); 
+    }
+});
+</script>
+
+</body>
+</html>
