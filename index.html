@@ -3,12 +3,47 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>เว็บแอปเล่นเพลง/วิดีโอ</title>
+<title>เว็บแอปเล่นเพลง / วิดีโอ</title>
 <style>
-body { font-family: sans-serif; text-align:center; background:#121212; color:white; }
-input, button { margin:5px; padding:10px; border:none; border-radius:5px; font-size:16px; }
-button { background:#1db954; color:white; }
-#mediaPlayer { width:90%; margin-top:15px; }
+body {
+  font-family: sans-serif;
+  text-align: center;
+  background: #121212;
+  color: white;
+}
+input, button {
+  margin: 5px;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+}
+button {
+  background: #1db954;
+  color: white;
+  cursor: pointer;
+}
+button:hover { background: #17a24f; }
+
+#playlist {
+  max-width: 90%;
+  margin: 15px auto;
+  text-align: left;
+  background: #1e1e1e;
+  border-radius: 10px;
+  padding: 10px;
+}
+.playlist-item {
+  padding: 8px 10px;
+  border-bottom: 1px solid #333;
+  cursor: pointer;
+  color: #ccc;
+}
+.playlist-item:hover { background: #333; color: white; }
+.playlist-item.active {
+  background: #1db954;
+  color: white;
+}
 </style>
 </head>
 <body>
@@ -26,9 +61,13 @@ button { background:#1db954; color:white; }
 <div id="songName" style="margin-top:10px;">ยังไม่มีไฟล์เล่น</div>
 
 <!-- player -->
-<audio id="audioPlayer" controls style="display:none;"></audio>
+<audio id="audioPlayer" controls style="display:none;width:90%;margin-top:15px;"></audio>
 <video id="videoPlayer" controls style="display:none;" width="90%"></video>
 <div id="youtubePlayer" style="display:none;"></div>
+
+<!-- Playlist -->
+<h3>📜 รายการเพลงที่เลือกไว้</h3>
+<div id="playlist"></div>
 
 <!-- ปุ่มควบคุม -->
 <div style="margin-top:10px;">
@@ -44,47 +83,70 @@ let currentIndex = 0;
 const audio = document.getElementById('audioPlayer');
 const video = document.getElementById('videoPlayer');
 const youtube = document.getElementById('youtubePlayer');
+const playlistDiv = document.getElementById('playlist');
 const songName = document.getElementById('songName');
 
-// --- เมื่อเลือกไฟล์ในเครื่อง ---
+// เมื่อเลือกไฟล์
 document.getElementById('fileInput').addEventListener('change', e => {
   files = Array.from(e.target.files);
   if (files.length > 0) {
     currentIndex = 0;
+    renderPlaylist();
     playLocal();
   }
 });
 
-// --- เล่นไฟล์ในเครื่อง ---
+// แสดง Playlist
+function renderPlaylist() {
+  playlistDiv.innerHTML = '';
+  files.forEach((file, index) => {
+    const div = document.createElement('div');
+    div.textContent = `${index + 1}. ${file.name}`;
+    div.classList.add('playlist-item');
+    if (index === currentIndex) div.classList.add('active');
+    div.onclick = () => {
+      currentIndex = index;
+      playLocal();
+      renderPlaylist();
+    };
+    playlistDiv.appendChild(div);
+  });
+}
+
+// เล่นไฟล์ในเครื่อง
 function playLocal() {
   hideAllPlayers();
   const file = files[currentIndex];
   const url = URL.createObjectURL(file);
   songName.textContent = `กำลังเล่น: ${file.name}`;
-  if (file.type.startsWith('audio')) {
+
+  const type = file.type || '';
+  if (type.startsWith('audio') || file.name.endsWith('.wav')) {
     audio.src = url;
     audio.style.display = 'block';
-    audio.play();
+    audio.play().catch(err => {
+      console.error('เล่นไม่ได้:', err);
+      songName.textContent = '⚠️ ไม่สามารถเล่นไฟล์เสียงนี้ได้';
+    });
   } else {
     video.src = url;
     video.style.display = 'block';
     video.play();
   }
+  renderPlaylist();
 }
 
-// --- เปิดจากลิงก์ ---
+// เปิดจากลิงก์
 document.getElementById('loadUrlBtn').addEventListener('click', () => {
   const url = document.getElementById('urlInput').value.trim();
   if (!url) return;
-
   hideAllPlayers();
+
   if (url.includes('youtube.com') || url.includes('youtu.be')) {
-    // YouTube Mode
     songName.textContent = 'กำลังเล่นจาก YouTube...';
     youtube.style.display = 'block';
     loadYouTube(url);
   } else {
-    // Direct file mode
     songName.textContent = `กำลังเล่นจากลิงก์: ${url}`;
     if (url.endsWith('.mp4')) {
       video.src = url;
@@ -105,7 +167,7 @@ function hideAllPlayers() {
   audio.pause(); video.pause();
 }
 
-// --- ปุ่มควบคุม ---
+// ปุ่มควบคุม
 document.getElementById('playBtn').onclick = () => {
   if (audio.style.display === 'block') {
     audio.paused ? audio.play() : audio.pause();
@@ -131,7 +193,7 @@ document.getElementById('stopBtn').onclick = () => {
   video.pause(); video.currentTime = 0;
 };
 
-// --- YouTube API ---
+// YouTube API
 function loadYouTube(url) {
   const videoId = url.split('v=')[1]?.split('&')[0] || url.split('/').pop();
   youtube.innerHTML = `<iframe width="90%" height="315"
