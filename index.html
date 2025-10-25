@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เว็บแอปเล่นเพลง</title>
+<style>
+body {
+  font-family: sans-serif;
+  text-align: center;
+  background: #121212;
+  color: white;
+}
+button {
+  margin: 10px;
+  padding: 10px 20px;
+  font-size: 18px;
+  border: none;
+  border-radius: 6px;
+  background: #1db954;
+  color: white;
+}
+button:hover { background: #17a24f; }
+#songName { margin-top: 20px; font-size: 20px; }
+</style>
+</head>
+<body>
+
+<h2>🎵 เว็บแอปเล่นเพลง 🎵</h2>
+<input type="file" id="fileInput" accept="audio/*" multiple>
+<div id="songName">ยังไม่มีเพลงเล่น</div>
+
+<audio id="audioPlayer" controls style="width:90%; margin-top:15px;"></audio>
+
+<div>
+  <button id="prevBtn">⏮️ ย้อนกลับ</button>
+  <button id="playBtn">▶️ เล่น / หยุด</button>
+  <button id="nextBtn">⏭️ ถัดไป</button>
+  <button id="stopBtn">⏹️ หยุด</button>
+</div>
+
+<script>
+let files = [];
+let currentIndex = 0;
+const audioPlayer = document.getElementById('audioPlayer');
+const songName = document.getElementById('songName');
+
+document.getElementById('fileInput').addEventListener('change', (e) => {
+  files = Array.from(e.target.files);
+  if (files.length > 0) {
+    currentIndex = 0;
+    loadSong();
+  }
+});
+
+function loadSong() {
+  const file = files[currentIndex];
+  if (!file) return;
+  audioPlayer.src = URL.createObjectURL(file);
+  songName.textContent = `กำลังเล่น: ${file.name}`;
+  audioPlayer.play();
+}
+
+document.getElementById('playBtn').onclick = () => {
+  if (audioPlayer.paused) audioPlayer.play();
+  else audioPlayer.pause();
+};
+
+document.getElementById('nextBtn').onclick = () => {
+  currentIndex = (currentIndex + 1) % files.length;
+  loadSong();
+};
+
+document.getElementById('prevBtn').onclick = () => {
+  currentIndex = (currentIndex - 1 + files.length) % files.length;
+  loadSong();
+};
+
+document.getElementById('stopBtn').onclick = () => {
+  audioPlayer.pause();
+  audioPlayer.currentTime = 0;
+};
+</script>
+
+</body>
+</html>
