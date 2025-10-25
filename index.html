@@ -77,7 +77,135 @@ button:hover { background: #17a24f; }
   <button id="stopBtn">⏹️</button>
 </div>
 
-<script>
+<script>// ... โค้ดเดิม
+
+// --------------------------------------------------------
+// ส่วนที่เพิ่ม: Media Session API เพื่อรองรับการเล่น Background และ Lock Screen Control
+// --------------------------------------------------------
+
+function updateMediaSession(title = 'กำลังเล่นเพลง', artist = 'เว็บแอปเล่นเพลง') {
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: title,
+      artist: artist,
+      album: 'รายการเพลงส่วนตัว',
+      // สามารถเพิ่มรูปภาพได้ถ้ามี (ต้องเป็น URL)
+      // artwork: [{ src: '/images/album-art.png', sizes: '96x96', type: 'image/png' }],
+    });
+
+    // กำหนด Action Handlers สำหรับปุ่มควบคุมบน Lock Screen / Notification
+    navigator.mediaSession.setActionHandler('play', () => {
+      // ตรวจสอบว่ากำลังเล่นไฟล์ในเครื่อง (audio/video) หรือ YouTube
+      if (audio.style.display === 'block') {
+        audio.play();
+      } else if (video.style.display === 'block') {
+        video.play();
+      }
+      // สำหรับ YouTube: ไม่สามารถควบคุม iframe ได้โดยตรง แต่ปุ่มจะแสดงสถานะ
+    });
+
+    navigator.mediaSession.setActionHandler('pause', () => {
+      if (audio.style.display === 'block') {
+        audio.pause();
+      } else if (video.style.display === 'block') {
+        video.pause();
+      }
+    });
+
+    // ปุ่มข้ามเพลง (Next Track)
+    navigator.mediaSession.setActionHandler('nexttrack', document.getElementById('nextBtn').onclick);
+    
+    // ปุ่มย้อนกลับเพลง (Previous Track)
+    navigator.mediaSession.setActionHandler('previoustrack', document.getElementById('prevBtn').onclick);
+    
+    // ตั้งค่าสถานะการเล่นเมื่อมีเพลงใหม่เริ่ม
+    navigator.mediaSession.playbackState = 'playing'; 
+  }
+}
+
+// อัปเดตฟังก์ชันเล่นเพลงในเครื่อง: เพื่อเรียกใช้ Media Session
+function playLocal() {
+  hideAllPlayers();
+  const file = files[currentIndex];
+  const url = URL.createObjectURL(file);
+  const fileName = file.name;
+  songName.textContent = `กำลังเล่น: ${fileName}`;
+
+  const type = file.type || '';
+  let player;
+
+  if (type.startsWith('audio') || fileName.endsWith('.wav') || fileName.endsWith('.mp3')) {
+    player = audio;
+    video.style.display = 'none'; // ป้องกันการแสดงพร้อมกัน
+  } else {
+    player = video;
+    audio.style.display = 'none'; // ป้องกันการแสดงพร้อมกัน
+  }
+  
+  player.src = url;
+  player.style.display = 'block';
+  player.play().then(() => {
+    // อัปเดต Media Session หลังจากเริ่มเล่นสำเร็จ
+    updateMediaSession(fileName, 'ไฟล์ในเครื่อง');
+  }).catch(err => {
+    console.error('เล่นไม่ได้:', err);
+    songName.textContent = '⚠️ ไม่สามารถเล่นไฟล์มีเดียนี้ได้';
+  });
+
+  renderPlaylist();
+}
+
+// อัปเดตฟังก์ชันเปิดจากลิงก์: เพื่อเรียกใช้ Media Session
+document.getElementById('loadUrlBtn').addEventListener('click', () => {
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) return;
+  hideAllPlayers();
+
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    songName.textContent = 'กำลังเล่นจาก YouTube...';
+    youtube.style.display = 'block';
+    loadYouTube(url);
+    // สำหรับ YouTube: ตั้งค่า Media Session เป็นสถานะที่ไม่ได้ควบคุมโดยตรง
+    updateMediaSession('YouTube Video', 'YouTube');
+  } else {
+    songName.textContent = `กำลังเล่นจากลิงก์: ${url}`;
+    let player;
+    if (url.endsWith('.mp4') || url.endsWith('.mov')) {
+      player = video;
+      audio.style.display = 'none';
+    } else {
+      player = audio;
+      video.style.display = 'none';
+    }
+    
+    player.src = url;
+    player.style.display = 'block';
+    player.play().then(() => {
+      // อัปเดต Media Session หลังจากเริ่มเล่นสำเร็จ
+      updateMediaSession(url.split('/').pop(), 'ลิงก์ภายนอก');
+    });
+  }
+});
+
+// อัปเดตปุ่มควบคุม: เพื่ออัปเดตสถานะใน Media Session
+document.getElementById('playBtn').onclick = () => {
+  let player = audio.style.display === 'block' ? audio : (video.style.display === 'block' ? video : null);
+
+  if (player) {
+    if (player.paused) {
+      player.play().then(() => {
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+      });
+    } else {
+      player.pause();
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    }
+  }
+};
+
+
+// ... โค้ดเดิม (ไม่ต้องแก้ไขส่วนอื่น)
+
 let files = [];
 let currentIndex = 0;
 const audio = document.getElementById('audioPlayer');
