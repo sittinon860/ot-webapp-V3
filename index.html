@@ -3,83 +3,141 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>เว็บแอปเล่นเพลง</title>
+<title>เว็บแอปเล่นเพลง/วิดีโอ</title>
 <style>
-body {
-  font-family: sans-serif;
-  text-align: center;
-  background: #121212;
-  color: white;
-}
-button {
-  margin: 10px;
-  padding: 10px 20px;
-  font-size: 18px;
-  border: none;
-  border-radius: 6px;
-  background: #1db954;
-  color: white;
-}
-button:hover { background: #17a24f; }
-#songName { margin-top: 20px; font-size: 20px; }
+body { font-family: sans-serif; text-align:center; background:#121212; color:white; }
+input, button { margin:5px; padding:10px; border:none; border-radius:5px; font-size:16px; }
+button { background:#1db954; color:white; }
+#mediaPlayer { width:90%; margin-top:15px; }
 </style>
 </head>
 <body>
 
-<h2>🎵 เว็บแอปเล่นเพลง 🎵</h2>
-<input type="file" id="fileInput" accept="audio/*" multiple>
-<div id="songName">ยังไม่มีเพลงเล่น</div>
+<h2>🎧 เว็บแอปเล่นเพลง / วิดีโอ 🎶</h2>
 
-<audio id="audioPlayer" controls style="width:90%; margin-top:15px;"></audio>
+<!-- เลือกไฟล์ -->
+<input type="file" id="fileInput" accept="audio/*,video/*" multiple><br>
 
-<div>
-  <button id="prevBtn">⏮️ ย้อนกลับ</button>
-  <button id="playBtn">▶️ เล่น / หยุด</button>
-  <button id="nextBtn">⏭️ ถัดไป</button>
-  <button id="stopBtn">⏹️ หยุด</button>
+<!-- ใส่ลิงก์ -->
+<input type="text" id="urlInput" placeholder="วางลิงก์เพลงหรือ YouTube" style="width:80%;">
+<button id="loadUrlBtn">เปิด</button>
+
+<!-- แสดงชื่อเพลง -->
+<div id="songName" style="margin-top:10px;">ยังไม่มีไฟล์เล่น</div>
+
+<!-- player -->
+<audio id="audioPlayer" controls style="display:none;"></audio>
+<video id="videoPlayer" controls style="display:none;" width="90%"></video>
+<div id="youtubePlayer" style="display:none;"></div>
+
+<!-- ปุ่มควบคุม -->
+<div style="margin-top:10px;">
+  <button id="prevBtn">⏮️</button>
+  <button id="playBtn">▶️ / ⏸️</button>
+  <button id="nextBtn">⏭️</button>
+  <button id="stopBtn">⏹️</button>
 </div>
 
 <script>
 let files = [];
 let currentIndex = 0;
-const audioPlayer = document.getElementById('audioPlayer');
+const audio = document.getElementById('audioPlayer');
+const video = document.getElementById('videoPlayer');
+const youtube = document.getElementById('youtubePlayer');
 const songName = document.getElementById('songName');
 
-document.getElementById('fileInput').addEventListener('change', (e) => {
+// --- เมื่อเลือกไฟล์ในเครื่อง ---
+document.getElementById('fileInput').addEventListener('change', e => {
   files = Array.from(e.target.files);
   if (files.length > 0) {
     currentIndex = 0;
-    loadSong();
+    playLocal();
   }
 });
 
-function loadSong() {
+// --- เล่นไฟล์ในเครื่อง ---
+function playLocal() {
+  hideAllPlayers();
   const file = files[currentIndex];
-  if (!file) return;
-  audioPlayer.src = URL.createObjectURL(file);
+  const url = URL.createObjectURL(file);
   songName.textContent = `กำลังเล่น: ${file.name}`;
-  audioPlayer.play();
+  if (file.type.startsWith('audio')) {
+    audio.src = url;
+    audio.style.display = 'block';
+    audio.play();
+  } else {
+    video.src = url;
+    video.style.display = 'block';
+    video.play();
+  }
 }
 
+// --- เปิดจากลิงก์ ---
+document.getElementById('loadUrlBtn').addEventListener('click', () => {
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) return;
+
+  hideAllPlayers();
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    // YouTube Mode
+    songName.textContent = 'กำลังเล่นจาก YouTube...';
+    youtube.style.display = 'block';
+    loadYouTube(url);
+  } else {
+    // Direct file mode
+    songName.textContent = `กำลังเล่นจากลิงก์: ${url}`;
+    if (url.endsWith('.mp4')) {
+      video.src = url;
+      video.style.display = 'block';
+      video.play();
+    } else {
+      audio.src = url;
+      audio.style.display = 'block';
+      audio.play();
+    }
+  }
+});
+
+function hideAllPlayers() {
+  audio.style.display = 'none';
+  video.style.display = 'none';
+  youtube.style.display = 'none';
+  audio.pause(); video.pause();
+}
+
+// --- ปุ่มควบคุม ---
 document.getElementById('playBtn').onclick = () => {
-  if (audioPlayer.paused) audioPlayer.play();
-  else audioPlayer.pause();
+  if (audio.style.display === 'block') {
+    audio.paused ? audio.play() : audio.pause();
+  } else if (video.style.display === 'block') {
+    video.paused ? video.play() : video.pause();
+  }
 };
 
 document.getElementById('nextBtn').onclick = () => {
-  currentIndex = (currentIndex + 1) % files.length;
-  loadSong();
+  if (files.length > 0) {
+    currentIndex = (currentIndex + 1) % files.length;
+    playLocal();
+  }
 };
-
 document.getElementById('prevBtn').onclick = () => {
-  currentIndex = (currentIndex - 1 + files.length) % files.length;
-  loadSong();
+  if (files.length > 0) {
+    currentIndex = (currentIndex - 1 + files.length) % files.length;
+    playLocal();
+  }
+};
+document.getElementById('stopBtn').onclick = () => {
+  audio.pause(); audio.currentTime = 0;
+  video.pause(); video.currentTime = 0;
 };
 
-document.getElementById('stopBtn').onclick = () => {
-  audioPlayer.pause();
-  audioPlayer.currentTime = 0;
-};
+// --- YouTube API ---
+function loadYouTube(url) {
+  const videoId = url.split('v=')[1]?.split('&')[0] || url.split('/').pop();
+  youtube.innerHTML = `<iframe width="90%" height="315"
+    src="https://www.youtube.com/embed/${videoId}?autoplay=1"
+    frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+}
 </script>
 
 </body>
