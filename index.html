@@ -32,12 +32,16 @@ button:hover { background: #17a24f; }
   background: #1e1e1e;
   border-radius: 10px;
   padding: 10px;
+  min-height: 50px; /* เพิ่มความสูงขั้นต่ำ */
 }
 .playlist-item {
   padding: 8px 10px;
   border-bottom: 1px solid #333;
   cursor: pointer;
   color: #ccc;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .playlist-item:hover { background: #333; color: white; }
 .playlist-item.active {
@@ -50,26 +54,20 @@ button:hover { background: #17a24f; }
 
 <h2>🎧 เว็บแอปเล่นเพลง / วิดีโอ 🎶</h2>
 
-<!-- เลือกไฟล์ -->
 <input type="file" id="fileInput" accept="audio/*,video/*" multiple><br>
 
-<!-- ใส่ลิงก์ -->
 <input type="text" id="urlInput" placeholder="วางลิงก์เพลงหรือ YouTube" style="width:80%;">
 <button id="loadUrlBtn">เปิด</button>
 
-<!-- แสดงชื่อเพลง -->
 <div id="songName" style="margin-top:10px;">ยังไม่มีไฟล์เล่น</div>
 
-<!-- player -->
 <audio id="audioPlayer" controls style="display:none;width:90%;margin-top:15px;"></audio>
-<video id="videoPlayer" controls style="display:none;" width="90%"></video>
+<video id="videoPlayer" controls playsinline style="display:none;" width="90%"></video>
 <div id="youtubePlayer" style="display:none;"></div>
 
-<!-- Playlist -->
 <h3>📜 รายการเพลงที่เลือกไว้</h3>
 <div id="playlist"></div>
 
-<!-- ปุ่มควบคุม -->
 <div style="margin-top:10px;">
   <button id="prevBtn">⏮️</button>
   <button id="playBtn">▶️ / ⏸️</button>
@@ -77,39 +75,38 @@ button:hover { background: #17a24f; }
   <button id="stopBtn">⏹️</button>
 </div>
 
-<script>// ... โค้ดเดิม
+<script>
+let files = [];
+let currentIndex = 0;
+const audio = document.getElementById('audioPlayer');
+const video = document.getElementById('videoPlayer');
+const youtube = document.getElementById('youtubePlayer');
+const playlistDiv = document.getElementById('playlist');
+const songName = document.getElementById('songName');
 
 // --------------------------------------------------------
-// ส่วนที่เพิ่ม: Media Session API เพื่อรองรับการเล่น Background และ Lock Screen Control
+// Media Session API Functions
 // --------------------------------------------------------
-
 function updateMediaSession(title = 'กำลังเล่นเพลง', artist = 'เว็บแอปเล่นเพลง') {
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: title,
       artist: artist,
       album: 'รายการเพลงส่วนตัว',
-      // สามารถเพิ่มรูปภาพได้ถ้ามี (ต้องเป็น URL)
-      // artwork: [{ src: '/images/album-art.png', sizes: '96x96', type: 'image/png' }],
     });
 
     // กำหนด Action Handlers สำหรับปุ่มควบคุมบน Lock Screen / Notification
     navigator.mediaSession.setActionHandler('play', () => {
-      // ตรวจสอบว่ากำลังเล่นไฟล์ในเครื่อง (audio/video) หรือ YouTube
-      if (audio.style.display === 'block') {
-        audio.play();
-      } else if (video.style.display === 'block') {
-        video.play();
-      }
-      // สำหรับ YouTube: ไม่สามารถควบคุม iframe ได้โดยตรง แต่ปุ่มจะแสดงสถานะ
+      // ใช้ปุ่ม Play/Pause กลางเพื่อจัดการสถานะการเล่น
+      document.getElementById('playBtn').click(); 
+      // ตั้งค่าสถานะการเล่น
+      if (audio.style.display === 'block' && audio.paused === false) navigator.mediaSession.playbackState = 'playing';
+      if (video.style.display === 'block' && video.paused === false) navigator.mediaSession.playbackState = 'playing';
     });
 
     navigator.mediaSession.setActionHandler('pause', () => {
-      if (audio.style.display === 'block') {
-        audio.pause();
-      } else if (video.style.display === 'block') {
-        video.pause();
-      }
+      document.getElementById('playBtn').click();
+      navigator.mediaSession.playbackState = 'paused';
     });
 
     // ปุ่มข้ามเพลง (Next Track)
@@ -118,12 +115,47 @@ function updateMediaSession(title = 'กำลังเล่นเพลง', a
     // ปุ่มย้อนกลับเพลง (Previous Track)
     navigator.mediaSession.setActionHandler('previoustrack', document.getElementById('prevBtn').onclick);
     
-    // ตั้งค่าสถานะการเล่นเมื่อมีเพลงใหม่เริ่ม
+    // ตั้งค่าสถานะการเล่น
     navigator.mediaSession.playbackState = 'playing'; 
   }
 }
 
-// อัปเดตฟังก์ชันเล่นเพลงในเครื่อง: เพื่อเรียกใช้ Media Session
+// --------------------------------------------------------
+// Player Controls and Functions
+// --------------------------------------------------------
+
+// เมื่อเลือกไฟล์
+document.getElementById('fileInput').addEventListener('change', e => {
+  // ล้างไฟล์เก่าจากลิงก์
+  files = Array.from(e.target.files);
+  if (files.length > 0) {
+    currentIndex = 0;
+    renderPlaylist();
+    playLocal();
+  }
+});
+
+// แสดง Playlist
+function renderPlaylist() {
+  playlistDiv.innerHTML = '';
+  if (files.length === 0) {
+    playlistDiv.textContent = 'ไม่มีเพลงในรายการ';
+    return;
+  }
+  files.forEach((file, index) => {
+    const div = document.createElement('div');
+    div.textContent = `${index + 1}. ${file.name}`;
+    div.classList.add('playlist-item');
+    if (index === currentIndex) div.classList.add('active');
+    div.onclick = () => {
+      currentIndex = index;
+      playLocal();
+    };
+    playlistDiv.appendChild(div);
+  });
+}
+
+// เล่นไฟล์ในเครื่อง (รองรับ .wav)
 function playLocal() {
   hideAllPlayers();
   const file = files[currentIndex];
@@ -132,62 +164,78 @@ function playLocal() {
   songName.textContent = `กำลังเล่น: ${fileName}`;
 
   const type = file.type || '';
-  let player;
+  let player = video; // กำหนดเริ่มต้นเป็น video
 
-  if (type.startsWith('audio') || fileName.endsWith('.wav') || fileName.endsWith('.mp3')) {
+  // ตรวจสอบว่าเป็นไฟล์เสียง (รวม .wav)
+  if (type.startsWith('audio') || fileName.endsWith('.wav') || fileName.endsWith('.mp3') || fileName.endsWith('.ogg')) {
     player = audio;
-    video.style.display = 'none'; // ป้องกันการแสดงพร้อมกัน
-  } else {
-    player = video;
-    audio.style.display = 'none'; // ป้องกันการแสดงพร้อมกัน
   }
   
   player.src = url;
   player.style.display = 'block';
+
+  // พยายามเล่นและอัปเดต Media Session
   player.play().then(() => {
-    // อัปเดต Media Session หลังจากเริ่มเล่นสำเร็จ
     updateMediaSession(fileName, 'ไฟล์ในเครื่อง');
   }).catch(err => {
     console.error('เล่นไม่ได้:', err);
     songName.textContent = '⚠️ ไม่สามารถเล่นไฟล์มีเดียนี้ได้';
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
   });
 
   renderPlaylist();
 }
 
-// อัปเดตฟังก์ชันเปิดจากลิงก์: เพื่อเรียกใช้ Media Session
+// เปิดจากลิงก์
 document.getElementById('loadUrlBtn').addEventListener('click', () => {
   const url = document.getElementById('urlInput').value.trim();
   if (!url) return;
+  
+  // ล้าง Playlist เมื่อเล่นจาก URL
+  files = []; 
+  currentIndex = 0;
+  renderPlaylist();
+
   hideAllPlayers();
 
   if (url.includes('youtube.com') || url.includes('youtu.be')) {
     songName.textContent = 'กำลังเล่นจาก YouTube...';
     youtube.style.display = 'block';
     loadYouTube(url);
-    // สำหรับ YouTube: ตั้งค่า Media Session เป็นสถานะที่ไม่ได้ควบคุมโดยตรง
-    updateMediaSession('YouTube Video', 'YouTube');
+    // YouTube ไม่สามารถควบคุมได้เต็มที่ใน background แต่เรายังอัปเดตชื่อเพลง
+    updateMediaSession('YouTube Video', 'อาจหยุดเล่นเมื่อปิดหน้าจอ');
   } else {
     songName.textContent = `กำลังเล่นจากลิงก์: ${url}`;
-    let player;
-    if (url.endsWith('.mp4') || url.endsWith('.mov')) {
+    let player = audio; 
+
+    // ตรวจสอบว่าเป็นวิดีโอ (สมมติว่าเป็น .mp4, .mov)
+    if (url.endsWith('.mp4') || url.endsWith('.mov') || url.includes('video')) {
       player = video;
-      audio.style.display = 'none';
-    } else {
-      player = audio;
-      video.style.display = 'none';
     }
     
     player.src = url;
     player.style.display = 'block';
+    
     player.play().then(() => {
-      // อัปเดต Media Session หลังจากเริ่มเล่นสำเร็จ
       updateMediaSession(url.split('/').pop(), 'ลิงก์ภายนอก');
+    }).catch(err => {
+      console.error('เล่นไม่ได้:', err);
+      songName.textContent = '⚠️ ไม่สามารถเล่นลิงก์มีเดียนี้ได้';
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
     });
   }
 });
 
-// อัปเดตปุ่มควบคุม: เพื่ออัปเดตสถานะใน Media Session
+function hideAllPlayers() {
+  audio.style.display = 'none';
+  video.style.display = 'none';
+  youtube.style.display = 'none';
+  audio.pause(); audio.currentTime = 0;
+  video.pause(); video.currentTime = 0;
+  youtube.innerHTML = ''; // ล้าง YouTube IFrame
+}
+
+// ปุ่มควบคุม Play/Pause
 document.getElementById('playBtn').onclick = () => {
   let player = audio.style.display === 'block' ? audio : (video.style.display === 'block' ? video : null);
 
@@ -200,107 +248,9 @@ document.getElementById('playBtn').onclick = () => {
       player.pause();
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
     }
-  }
-};
-
-
-// ... โค้ดเดิม (ไม่ต้องแก้ไขส่วนอื่น)
-
-let files = [];
-let currentIndex = 0;
-const audio = document.getElementById('audioPlayer');
-const video = document.getElementById('videoPlayer');
-const youtube = document.getElementById('youtubePlayer');
-const playlistDiv = document.getElementById('playlist');
-const songName = document.getElementById('songName');
-
-// เมื่อเลือกไฟล์
-document.getElementById('fileInput').addEventListener('change', e => {
-  files = Array.from(e.target.files);
-  if (files.length > 0) {
-    currentIndex = 0;
-    renderPlaylist();
-    playLocal();
-  }
-});
-
-// แสดง Playlist
-function renderPlaylist() {
-  playlistDiv.innerHTML = '';
-  files.forEach((file, index) => {
-    const div = document.createElement('div');
-    div.textContent = `${index + 1}. ${file.name}`;
-    div.classList.add('playlist-item');
-    if (index === currentIndex) div.classList.add('active');
-    div.onclick = () => {
-      currentIndex = index;
-      playLocal();
-      renderPlaylist();
-    };
-    playlistDiv.appendChild(div);
-  });
-}
-
-// เล่นไฟล์ในเครื่อง
-function playLocal() {
-  hideAllPlayers();
-  const file = files[currentIndex];
-  const url = URL.createObjectURL(file);
-  songName.textContent = `กำลังเล่น: ${file.name}`;
-
-  const type = file.type || '';
-  if (type.startsWith('audio') || file.name.endsWith('.wav')) {
-    audio.src = url;
-    audio.style.display = 'block';
-    audio.play().catch(err => {
-      console.error('เล่นไม่ได้:', err);
-      songName.textContent = '⚠️ ไม่สามารถเล่นไฟล์เสียงนี้ได้';
-    });
-  } else {
-    video.src = url;
-    video.style.display = 'block';
-    video.play();
-  }
-  renderPlaylist();
-}
-
-// เปิดจากลิงก์
-document.getElementById('loadUrlBtn').addEventListener('click', () => {
-  const url = document.getElementById('urlInput').value.trim();
-  if (!url) return;
-  hideAllPlayers();
-
-  if (url.includes('youtube.com') || url.includes('youtu.be')) {
-    songName.textContent = 'กำลังเล่นจาก YouTube...';
-    youtube.style.display = 'block';
-    loadYouTube(url);
-  } else {
-    songName.textContent = `กำลังเล่นจากลิงก์: ${url}`;
-    if (url.endsWith('.mp4')) {
-      video.src = url;
-      video.style.display = 'block';
-      video.play();
-    } else {
-      audio.src = url;
-      audio.style.display = 'block';
-      audio.play();
-    }
-  }
-});
-
-function hideAllPlayers() {
-  audio.style.display = 'none';
-  video.style.display = 'none';
-  youtube.style.display = 'none';
-  audio.pause(); video.pause();
-}
-
-// ปุ่มควบคุม
-document.getElementById('playBtn').onclick = () => {
-  if (audio.style.display === 'block') {
-    audio.paused ? audio.play() : audio.pause();
-  } else if (video.style.display === 'block') {
-    video.paused ? video.play() : video.pause();
+  } else if (youtube.style.display === 'block') {
+    // ไม่มีปุ่มควบคุม Play/Pause โดยตรงสำหรับ YouTube IFrame
+    console.log("กรุณาใช้ปุ่มควบคุมบน YouTube Player โดยตรง");
   }
 };
 
@@ -319,14 +269,35 @@ document.getElementById('prevBtn').onclick = () => {
 document.getElementById('stopBtn').onclick = () => {
   audio.pause(); audio.currentTime = 0;
   video.pause(); video.currentTime = 0;
+  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
 };
 
 // YouTube API
 function loadYouTube(url) {
-  const videoId = url.split('v=')[1]?.split('&')[0] || url.split('/').pop();
-  youtube.innerHTML = `<iframe width="90%" height="315"
-    src="https://www.youtube.com/embed/${videoId}?autoplay=1"
-    frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+  // พยายามดึง Video ID จาก URL หลายรูปแบบ
+  let videoId = '';
+  const urlParams = new URLSearchParams(new URL(url).search);
+  videoId = urlParams.get('v');
+  if (!videoId && url.includes('youtu.be/')) {
+    videoId = url.split('youtu.be/')[1].split('?')[0];
+  }
+
+  if (videoId) {
+      youtube.innerHTML = `<iframe width="90%" height="315"
+        src="https://www.youtube.com/embed/${videoId}?autoplay=1"
+        frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+  } else {
+      songName.textContent = '⚠️ ไม่พบ Video ID ของ YouTube';
+  }
+}
+
+// อัปเดต Playlists เมื่อเพลงเล่นจบอัตโนมัติ (สำหรับไฟล์ในเครื่อง)
+audio.addEventListener('ended', document.getElementById('nextBtn').onclick);
+video.addEventListener('ended', document.getElementById('nextBtn').onclick);
+
+// เริ่มต้น: ตรวจสอบสถานะการเล่น
+if ('mediaSession' in navigator) {
+    navigator.mediaSession.playbackState = 'none';
 }
 </script>
 
